@@ -1,0 +1,30 @@
+# Dependencies and generated artifacts
+node_modules/
+dist/
+.angular/
+coverage/
+out-tsc/
+tmp/
+
+# Local configuration, credentials, and logs
+.env
+.env.*
+.npmrc
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+*.log
+logs/
+
+# Version control and IDE files
+.gcloudignore
+.git/
+.gitignore
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db

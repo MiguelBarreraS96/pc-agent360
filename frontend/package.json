@@ -9,7 +9,8 @@
   "scripts": {
     "start": "ng serve",
     "build": "ng build",
-    "typecheck": "ng build --configuration development"
+    "typecheck": "ng build --configuration development",
+    "deploy": "gcloud run deploy pl-agent360 --source . --project sb-dominique-ai --region us-central1 --port 8080 --allow-unauthenticated --ingress=all --cpu=1 --memory=256Mi --timeout=15s --concurrency=80 --min-instances=0 --max-instances=2 --quiet"
   },
   "dependencies": {
     "@angular/common": "20.3.0",

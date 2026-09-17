@@ -25,7 +25,7 @@ Antes de instalar dependencias, compruebe el registry:
 npm config get registry
 ```
 
-El entorno actual apunta a `https://registry.npmjs.org/`. Por política de cadena de suministro, **no se instalaron paquetes ni se generaron lockfiles desde ese registry público**. Configure el registry JFrog institucional antes de continuar; no se debe modificar la configuración global ni sustituirlo por un origen público.
+El entorno local actual apunta a `https://registry.npmjs.org/`. Los `package-lock.json` existentes pueden conservar URLs resueltas desde ese origen anterior. Antes de cualquier instalación, build remoto o despliegue, deben validarse o regenerarse desde el registry institucional en un entorno controlado. No ejecute `npm install`, `npm ci` ni `npm run deploy` mientras esa precondición no se cumpla; no se debe sustituir el origen institucional por npm público.
 
 ## Instalación, compilación e inicio
 
@@ -56,6 +56,33 @@ Pop-Location
 ```
 
 El servidor de desarrollo de Angular inicia en el puerto indicado por Angular CLI. La ruta inicial es `/`.
+
+## Despliegue inicial en Cloud Run
+
+Los Dockerfiles, los archivos `.gcloudignore` y los scripts `npm run deploy` preparan un despliegue desde fuente para los dos servicios. Esta configuración no ejecutó instalaciones, builds ni despliegues.
+
+| Servicio | Directorio | Acceso inicial | Puerto | Recursos iniciales |
+| --- | --- | --- | --- | --- |
+| `pl-agent360` | `frontend/` | Público | `8080` | 1 CPU, 256 MiB, máximo 2 instancias |
+| `bk-agent360` | `backend/` | Público temporalmente | `8080` | 1 CPU, 512 MiB, máximo 2 instancias |
+
+Los dos scripts usan el proyecto `sb-dominique-ai`, la región `us-central1`, `gcloud run deploy --source .` y sus Dockerfiles respectivos. Cloud Run inyecta el puerto de ejecución; el backend recibe además `HOST=0.0.0.0`, `GOOGLE_CLOUD_PROJECT=sb-dominique-ai` y `FIRESTORE_DATABASE_ID=pc-agent-360` como variables no secretas.
+
+Al usar `--source`, Cloud Run realiza el build remoto con el Dockerfile presente y administra internamente el repositorio de imágenes de despliegue desde fuente; no se configuró ni versionó un repositorio Artifact Registry explícito. Antes de ejecutar los scripts, el principal de despliegue debe contar con los permisos requeridos por Cloud Run para despliegue desde fuente y el proyecto debe tener habilitados los servicios necesarios.
+
+Para ejecutar el despliegue posteriormente, con Google Cloud CLI autenticado y el acceso institucional de dependencias disponible en el entorno remoto de build:
+
+```powershell
+Push-Location .\frontend
+npm run deploy
+Pop-Location
+
+Push-Location .\backend
+npm run deploy
+Pop-Location
+```
+
+No se añadió configuración de registry, credenciales, secretos ni un repositorio Artifact Registry explícito al código. El backend es público solo de forma temporal; antes de exponer endpoints con datos se debe restringir su acceso, añadir autenticación y configurar el origen HTTPS exacto del frontend en CORS.
 
 ## Seguridad y operación
 

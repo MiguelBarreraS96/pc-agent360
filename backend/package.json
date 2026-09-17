@@ -10,7 +10,8 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "deploy": "gcloud run deploy bk-agent360 --source . --project=sb-dominique-ai --region=us-central1 --port=8080 --allow-unauthenticated --ingress=all --cpu=1 --memory=512Mi --timeout=15s --concurrency=80 --min-instances=0 --max-instances=2 --set-env-vars=NODE_ENV=production,HOST=0.0.0.0,GOOGLE_CLOUD_PROJECT=sb-dominique-ai,FIRESTORE_DATABASE_ID=pc-agent-360 --quiet"
   },
   "dependencies": {
     "cors": "2.8.5",

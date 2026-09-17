@@ -20,6 +20,16 @@ function isStatusBearingError(error: unknown): error is StatusBearingError {
   return typeof error === "object" && error !== null;
 }
 
+/** Check whether an unknown value is a safe client-error status code. */
+function isSafeClientErrorStatus(status: unknown): status is number {
+  return (
+    typeof status === "number" &&
+    Number.isInteger(status) &&
+    status >= 400 &&
+    status < 500
+  );
+}
+
 /** Restrict exposed error statuses to safe client-error codes. */
 function resolveResponseStatus(error: unknown): number {
   if (!isStatusBearingError(error)) {
@@ -27,7 +37,7 @@ function resolveResponseStatus(error: unknown): number {
   }
 
   const status = typeof error.status === "number" ? error.status : error.statusCode;
-  return Number.isInteger(status) && status >= 400 && status < 500 ? status : 500;
+  return isSafeClientErrorStatus(status) ? status : 500;
 }
 
 /** Build a predictable response without exposing internal error details. */

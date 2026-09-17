@@ -1,0 +1,31 @@
+# Mantener Dockerfile, package.json, package-lock.json, tsconfig.json y src/
+# disponibles para la compilación desde fuente.
+
+# Dependencias y artefactos generados localmente
+node_modules/
+dist/
+
+# Configuración local, credenciales y secretos
+.env*
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+*.secret
+*.secrets
+secrets/
+secret/
+
+# Registros y resultados locales
+*.log
+logs/
+coverage/
+
+# Control de versiones y metadatos del editor
+.git/
+.gitignore
+.vscode/
+.idea/
+*.swp
+.DS_Store
