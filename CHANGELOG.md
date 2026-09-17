@@ -40,6 +40,9 @@ y este proyecto adhiere a [Versionamiento Semántico](https://semver.org/lang/es
 - Se crearon los proyectos iniciales de backend Node.js con Express y frontend Angular, junto con sus configuraciones de compilación y documentación de arranque.
 - Se agregó el contrato OpenAPI y la colección Postman para el endpoint de disponibilidad del backend.
 
+### Corregido
+- Se corrigió el bloqueo de la consulta Cliente 360 desde el frontend desplegado: se agregó el dominio del backend en Cloud Run a la directiva `connect-src` de la Content Security Policy en `frontend/nginx.conf`, y se añadieron ambos formatos de URL del frontend (canónica y basada en número de proyecto) a `CORS_ALLOWED_ORIGINS` del backend para que el navegador no bloquee las peticiones por CSP ni por CORS.
+
 ### Cambiado
 - Se adaptaron los Dockerfiles, Nginx y scripts de despliegue para los servicios Cloud Run `pl-agent360` y `bk-agent360` en `us-central1`.
 
