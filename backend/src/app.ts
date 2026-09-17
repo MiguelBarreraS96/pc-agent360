@@ -2,6 +2,7 @@ import cors, { type CorsOptions } from "cors";
 import express, { type Express, type RequestHandler } from "express";
 import helmet from "helmet";
 
+import { cliente360Router } from "./cliente360/cliente360-router";
 import { appConfig } from "./config";
 import { correlationIdMiddleware } from "./middleware/correlation-id";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
@@ -18,7 +19,7 @@ function createCorsOptions(allowedOrigins: ReadonlySet<string>): CorsOptions {
     allowedHeaders: ["Content-Type", "X-Correlation-ID"],
     exposedHeaders: ["X-Correlation-ID"],
     maxAge: 600,
-    methods: ["GET"],
+    methods: ["GET", "POST"],
     optionsSuccessStatus: 204,
     origin(origin, callback): void {
       const isAllowed = origin === undefined || allowedOrigins.has(origin);
@@ -46,6 +47,7 @@ export function createApp(): Express {
   app.use(cors(createCorsOptions(appConfig.corsAllowedOrigins)));
   app.use(express.json({ limit: appConfig.jsonBodyLimit, strict: true }));
   app.get("/api/v1/health", healthHandler);
+  app.use(cliente360Router);
   app.use(notFoundHandler);
   app.use(errorHandler);
 

@@ -7,6 +7,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/home/home').then((module) => module.HomeComponent),
   },
   {
+    path: 'consulta360',
+    loadComponent: () =>
+      import('./features/consulta360/consulta360').then((module) => module.Consulta360Component),
+  },
+  {
     path: '**',
     redirectTo: '',
   },

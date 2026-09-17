@@ -26,8 +26,11 @@ function resolveResponseStatus(error: unknown): number {
     return 500;
   }
 
-  const status = typeof error.status === "number" ? error.status : error.statusCode;
-  return Number.isInteger(status) && status >= 400 && status < 500 ? status : 500;
+  const candidate = typeof error.status === "number" ? error.status : error.statusCode;
+  if (typeof candidate === "number" && Number.isInteger(candidate) && candidate >= 400 && candidate < 500) {
+    return candidate;
+  }
+  return 500;
 }
 
 /** Build a predictable response without exposing internal error details. */
