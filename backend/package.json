@@ -7,21 +7,29 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch --env-file=.env src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "jest --config jest.config.js",
     "deploy": "gcloud run deploy bk-agent360 --source . --project=sb-dominique-ai --region=us-central1 --port=8080 --allow-unauthenticated --ingress=all --cpu=1 --memory=512Mi --timeout=15s --concurrency=80 --min-instances=0 --max-instances=2 --set-env-vars=NODE_ENV=production,HOST=0.0.0.0,GOOGLE_CLOUD_PROJECT=sb-dominique-ai,FIRESTORE_DATABASE_ID=pc-agent-360 --quiet"
   },
   "dependencies": {
     "cors": "2.8.5",
     "express": "4.21.2",
-    "helmet": "8.0.0"
+    "helmet": "8.0.0",
+    "zod": "3.24.1"
   },
   "devDependencies": {
     "@types/cors": "2.8.17",
     "@types/express": "4.17.21",
+    "@types/jest": "29.5.14",
     "@types/node": "20.17.24",
+    "@types/supertest": "6.0.2",
+    "fast-check": "3.23.1",
+    "jest": "29.7.0",
+    "supertest": "7.0.0",
+    "ts-jest": "29.2.5",
     "tsx": "4.19.3",
     "typescript": "5.7.3"
   }

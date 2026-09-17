@@ -56,6 +56,29 @@ h1 {
   line-height: 1.6;
 }
 
+.cta-button {
+  display: inline-block;
+  margin-top: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  background: #0067b1;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.cta-button:hover,
+.cta-button:focus-visible {
+  background: #004b87;
+}
+
+.cta-button:focus-visible {
+  outline: 0.1875rem solid #99c7e8;
+  outline-offset: 0.125rem;
+}
+
 .integration-notice {
   padding: 1.5rem;
 }
