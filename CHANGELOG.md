@@ -41,7 +41,11 @@ y este proyecto adhiere a [Versionamiento Semántico](https://semver.org/lang/es
 - Se agregó el contrato OpenAPI y la colección Postman para el endpoint de disponibilidad del backend.
 
 ### Corregido
+- Se corrigió el `502 UPSTREAM_ERROR` de la consulta Cliente 360 alineando la consulta GraphQL con el contrato real de Conecta: el argumento ahora va anidado en `cliente(cliente: { ... })` (tipo `ClienteInput!`) y los campos de `cliente360` se seleccionan mediante el inline fragment `... on Cliente360NaturalType`. Se ajustaron los tipos a la respuesta real: `numeroCelular` (`number | string | null`) se enmascara correctamente convirtiéndolo a dígitos antes de ocultar, y los campos `aptoAutos`/`aptoHogar`/`aptoSalud`/`aptoVida` (`string | null`, `"Si"`/`"No"`) se muestran tal cual en lugar de evaluarse como booleanos. Afecta `graphql-client.ts`, `conecta-types.ts`, `pii-masking.ts`, `cliente360-dto.ts` (backend) y `consulta360-models.ts`, `consulta360.html` (frontend).
 - Se corrigió el bloqueo de la consulta Cliente 360 desde el frontend desplegado: se agregó el dominio del backend en Cloud Run a la directiva `connect-src` de la Content Security Policy en `frontend/nginx.conf`, y se añadieron ambos formatos de URL del frontend (canónica y basada en número de proyecto) a `CORS_ALLOWED_ORIGINS` del backend para que el navegador no bloquee las peticiones por CSP ni por CORS.
+
+### Documentación
+- Se creó el spec `fix-consulta-cliente-360-graphql` (requirements, design y tasks) que documenta la causa raíz del `502 UPSTREAM_ERROR` de la consulta Cliente 360 —desajuste del contrato GraphQL de Conecta (argumento `ClienteInput!`, inline fragment `Cliente360NaturalType`, y tipos reales de `numeroCelular` y `apto*`)— y el plan de corrección en backend y frontend.
 
 ### Cambiado
 - Se adaptaron los Dockerfiles, Nginx y scripts de despliegue para los servicios Cloud Run `pl-agent360` y `bk-agent360` en `us-central1`.

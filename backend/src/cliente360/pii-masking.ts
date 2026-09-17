@@ -26,15 +26,18 @@ const REVEAL_COUNT = 4;
  * carácter original (Req 6.2). La longitud de la máscara refleja la cantidad de
  * caracteres significativos del valor original.
  *
+ * Acepta valores numéricos (p. ej. `numeroCelular` que Conecta entrega como número)
+ * y los normaliza a su representación en dígitos antes de enmascarar.
+ *
  * @param value valor a enmascarar (celular, documento o correo); puede ser nulo.
  * @returns cadena enmascarada; nunca expone caracteres fuera del sufijo revelado.
  */
-export function maskLastFour(value: string | null | undefined): string {
+export function maskLastFour(value: number | string | null | undefined): string {
   if (value === null || value === undefined) {
     return "";
   }
 
-  const significant = value.trim();
+  const significant = String(value).trim();
   const length = significant.length;
 
   if (length === 0) {
@@ -57,7 +60,7 @@ export function maskLastFour(value: string | null | undefined): string {
  * @returns `CelularDTO` con el número enmascarado, o `null` si no hay celular.
  */
 function toCelularDTO(
-  celular: { readonly numeroCelular: string | null; readonly fuente: string | null } | null,
+  celular: { readonly numeroCelular: number | string | null; readonly fuente: string | null } | null,
 ): CelularDTO | null {
   if (celular === null) {
     return null;

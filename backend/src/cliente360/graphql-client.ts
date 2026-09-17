@@ -38,26 +38,31 @@ const HTTP_UNAUTHORIZED = 401;
 /**
  * Consulta GraphQL exacta de cliente (fuente única de verdad del diseño).
  *
- * Selecciona los campos demográficos, de contacto, de Cliente 360 y el valor de
- * ingresos definidos en el contrato con Conecta.
+ * El argumento de negocio va anidado en el input `cliente` de tipo `ClienteInput!`
+ * (`cliente(cliente: { tipoDocumento, numeroDocumento })`). Los campos de Cliente 360
+ * se seleccionan mediante el inline fragment `... on Cliente360NaturalType`, ya que
+ * `cliente360` es un tipo union en el esquema de Conecta. Selecciona los campos
+ * demográficos, de contacto, de Cliente 360 y el valor de ingresos del contrato.
  */
 const CONSULTA_CLIENTE_QUERY = `query ConsultaCliente360($tipoDocumento: String!, $numeroDocumento: BigInt!) {
-  cliente(tipoDocumento: $tipoDocumento, numeroDocumento: $numeroDocumento) {
+  cliente(cliente: { tipoDocumento: $tipoDocumento, numeroDocumento: $numeroDocumento }) {
     demografica { edad }
     contacto {
       mejorCelular { numeroCelular fuente }
       celulares { numeroCelular fuente }
     }
     cliente360 {
-      clv
-      categoriaIngresos
-      antiguedad
-      ciudad
-      productoRecomendado
-      aptoAutos
-      aptoHogar
-      aptoSalud
-      aptoVida
+      ... on Cliente360NaturalType {
+        clv
+        categoriaIngresos
+        antiguedad
+        ciudad
+        productoRecomendado
+        aptoAutos
+        aptoHogar
+        aptoSalud
+        aptoVida
+      }
     }
     valorIngresos
   }

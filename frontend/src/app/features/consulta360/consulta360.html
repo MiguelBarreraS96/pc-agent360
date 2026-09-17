@@ -150,27 +150,19 @@
                 </div>
                 <div class="result-item">
                   <dt>Apto autos</dt>
-                  <dd>
-                    {{ data.cliente360.aptoAutos === null ? noDisponible : (data.cliente360.aptoAutos ? 'Sí' : 'No') }}
-                  </dd>
+                  <dd>{{ data.cliente360.aptoAutos ?? noDisponible }}</dd>
                 </div>
                 <div class="result-item">
                   <dt>Apto hogar</dt>
-                  <dd>
-                    {{ data.cliente360.aptoHogar === null ? noDisponible : (data.cliente360.aptoHogar ? 'Sí' : 'No') }}
-                  </dd>
+                  <dd>{{ data.cliente360.aptoHogar ?? noDisponible }}</dd>
                 </div>
                 <div class="result-item">
                   <dt>Apto salud</dt>
-                  <dd>
-                    {{ data.cliente360.aptoSalud === null ? noDisponible : (data.cliente360.aptoSalud ? 'Sí' : 'No') }}
-                  </dd>
+                  <dd>{{ data.cliente360.aptoSalud ?? noDisponible }}</dd>
                 </div>
                 <div class="result-item">
                   <dt>Apto vida</dt>
-                  <dd>
-                    {{ data.cliente360.aptoVida === null ? noDisponible : (data.cliente360.aptoVida ? 'Sí' : 'No') }}
-                  </dd>
+                  <dd>{{ data.cliente360.aptoVida ?? noDisponible }}</dd>
                 </div>
               </div>
 

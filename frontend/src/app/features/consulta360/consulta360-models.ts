@@ -51,10 +51,10 @@ export interface ClienteResponseDTO {
     readonly antiguedad: number | null;
     readonly ciudad: string | null;
     readonly productoRecomendado: string | null;
-    readonly aptoAutos: boolean | null;
-    readonly aptoHogar: boolean | null;
-    readonly aptoSalud: boolean | null;
-    readonly aptoVida: boolean | null;
+    readonly aptoAutos: string | null;
+    readonly aptoHogar: string | null;
+    readonly aptoSalud: string | null;
+    readonly aptoVida: string | null;
   };
   readonly valorIngresos: number | null;
 }

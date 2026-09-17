@@ -55,11 +55,11 @@ export interface ConectaClienteData {
   } | null;
   readonly contacto: {
     readonly mejorCelular: {
-      readonly numeroCelular: string | null;
+      readonly numeroCelular: number | string | null;
       readonly fuente: string | null;
     } | null;
     readonly celulares: ReadonlyArray<{
-      readonly numeroCelular: string | null;
+      readonly numeroCelular: number | string | null;
       readonly fuente: string | null;
     }> | null;
   } | null;
@@ -69,10 +69,10 @@ export interface ConectaClienteData {
     readonly antiguedad: number | null;
     readonly ciudad: string | null;
     readonly productoRecomendado: string | null;
-    readonly aptoAutos: boolean | null;
-    readonly aptoHogar: boolean | null;
-    readonly aptoSalud: boolean | null;
-    readonly aptoVida: boolean | null;
+    readonly aptoAutos: string | null;
+    readonly aptoHogar: string | null;
+    readonly aptoSalud: string | null;
+    readonly aptoVida: string | null;
   } | null;
   readonly valorIngresos: number | null;
 }
