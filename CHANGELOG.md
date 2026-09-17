@@ -8,6 +8,7 @@ y este proyecto adhiere a [Versionamiento Semántico](https://semver.org/lang/es
 ## [No publicado]
 
 ### Agregado
+- Se creó `frontend/src/environments/environment.prod.ts` (`production: true`, `apiBaseUrl` apuntando al backend en Cloud Run) y se configuró `fileReplacements` en `angular.json` para que el build de producción use el backend real en lugar de `localhost`.
 - Se agregó un botón "Consultar Cliente 360" en la vista Home (`frontend/src/app/features/home/`) que navega a la ruta `/consulta360` mediante `routerLink`, con estilo acorde a la identidad visual institucional.
 - Se creó el documento de requisitos (formato EARS) para la funcionalidad Consulta Cliente 360, que consulta información consolidada de cliente vía backend intermediario OAuth2 + GraphQL.
 - Se creó el documento de diseño técnico (design.md) de Consulta Cliente 360 con patrón BFF, componentes de backend (TokenService, GraphQLClient, circuit breaker, enmascaramiento PII, validación Zod), componentes de frontend (vista lazy consulta360), modelos de datos, manejo de errores, propiedades de correctitud y estrategia de pruebas.
@@ -33,6 +34,7 @@ y este proyecto adhiere a [Versionamiento Semántico](https://semver.org/lang/es
 - Se montó el `cliente360Router` en `createApp` (`backend/src/app.ts`) después de los middleware de `correlationId` y `express.json()` y antes del `notFoundHandler`/`errorHandler`, y se agregó el método `POST` a la configuración CORS para habilitar el endpoint de consulta Cliente 360 (Req 3.1, 3.2).
 
 ### Cambiado
+- Se actualizó el script `deploy` de `backend/package.json` para el despliegue en Cloud Run: URLs reales de Conecta, `CORS_ALLOWED_ORIGINS` con el dominio del frontend y variables no sensibles vía `--set-env-vars`, e inyección de las credenciales de Conecta (client id/secret, x-user-key) desde Secret Manager vía `--set-secrets` (nunca en texto plano).
 - Se actualizó el script `dev` de `backend/package.json` para cargar el archivo `.env` automáticamente vía `tsx watch --env-file=.env src/server.ts`, permitiendo el arranque local sin variables de entorno externas.
 - Se actualizaron los Requisitos 1 y 2 de Consulta Cliente 360 para incorporar un botón "Enviar" explícito que dispara la consulta, la disposición lado a lado del área de resultados junto al formulario, y el mensaje específico "No existe información de este cliente" cuando no hay datos.
 - Se crearon los proyectos iniciales de backend Node.js con Express y frontend Angular, junto con sus configuraciones de compilación y documentación de arranque.
