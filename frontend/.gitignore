@@ -1,0 +1,26 @@
+# Dependencies
+/node_modules/
+
+# Angular build and cache artifacts
+/.angular/
+/dist/
+/out-tsc/
+/tmp/
+
+# Test and tool artifacts
+/coverage/
+/.sass-cache/
+/testem.log
+/npm-debug.log*
+/yarn-debug.log*
+/yarn-error.log*
+
+# IDEs and editors
+/.idea/
+/.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Operating system files
+.DS_Store
+Thumbs.db

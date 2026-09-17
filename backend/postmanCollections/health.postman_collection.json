@@ -1,0 +1,25 @@
+{
+  "info": {
+    "_postman_id": "b89cc5bf-5636-4f7d-9d6e-010bc8d24e45",
+    "name": "pc-agent360 backend health",
+    "description": "Consulta de disponibilidad sin datos sensibles.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3000"
+    }
+  ],
+  "item": [
+    {
+      "name": "GET /api/v1/health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/health"
+      },
+      "response": []
+    }
+  ]
+}

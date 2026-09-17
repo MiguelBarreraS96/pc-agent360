@@ -1,0 +1,99 @@
+openapi: 3.0.3
+info:
+  title: pc-agent360 Backend API
+  version: 1.0.0
+  description: Contrato de la API mínima de disponibilidad del backend.
+servers:
+  - url: http://127.0.0.1:3000
+    description: Ejecución local
+paths:
+  /api/v1/health:
+    get:
+      tags:
+        - Availability
+      summary: Consulta el estado de disponibilidad del backend
+      operationId: getHealth
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: El proceso está disponible.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          description: Ocurrió un error interno sin detalles expuestos.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  parameters:
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: UUID v4 para correlacionar la solicitud. Si no es válido, el servicio genera uno nuevo.
+      schema:
+        $ref: '#/components/schemas/CorrelationId'
+  headers:
+    CorrelationId:
+      description: UUID v4 asociado a la solicitud.
+      schema:
+        $ref: '#/components/schemas/CorrelationId'
+  schemas:
+    CorrelationId:
+      type: string
+      format: uuid
+      pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+      example: f7f37666-1f56-4d06-a26e-4748d7b4da3e
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - correlationId
+        - service
+        - status
+      properties:
+        correlationId:
+          $ref: '#/components/schemas/CorrelationId'
+        service:
+          type: string
+          enum:
+            - pc-agent360-backend
+        status:
+          type: string
+          enum:
+            - UP
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - correlationId
+        - error
+      properties:
+        correlationId:
+          $ref: '#/components/schemas/CorrelationId'
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - INTERNAL_ERROR
+                - NOT_FOUND
+                - REQUEST_REJECTED
+            message:
+              type: string
+              description: Mensaje genérico que no contiene trazas ni información sensible.

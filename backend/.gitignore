@@ -1,0 +1,16 @@
+# Dependencias y artefactos de compilación
+node_modules/
+dist/
+
+# Configuración local y secretos
+.env
+.env.*
+!.env.example
+
+# Archivos de herramientas y editores
+.idea/
+.vscode/
+
+# Registros locales
+*.log
+npm-debug.log*
