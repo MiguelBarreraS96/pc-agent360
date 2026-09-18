@@ -4,14 +4,22 @@ const DEFAULT_FIRESTORE_DATABASE_ID = "(default)";
 const DEFAULT_GEMINI_LOCATION = "us-central1";
 const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite";
 const DEFAULT_INACTIVITY_TIMEOUT_SECONDS = 900;
+const DEFAULT_CONECTA_SCOPE = "SrcServerCognitoConecta/ConectaApiScope";
+const DEFAULT_CONECTA_TOKEN_TIMEOUT_MS = 5000;
+const DEFAULT_CONECTA_GRAPHQL_TIMEOUT_MS = 15000;
+const DEFAULT_CONECTA_TOKEN_REFRESH_MARGIN_MS = 60000;
+const DEFAULT_CONECTA_BREAKER_FAILURE_THRESHOLD = 5;
+const DEFAULT_CONECTA_BREAKER_RECOVERY_MS = 30000;
 const MAX_PORT = 65_535;
 const MAX_INACTIVITY_TIMEOUT_SECONDS = 3_600;
 const MIN_INACTIVITY_TIMEOUT_SECONDS = 60;
+const ALLOWED_CONECTA_HOSTS = new Set(["api-conecta.segurosbolivar.com"]);
 
 export type CookieSameSite = "lax" | "none" | "strict";
 export type RuntimeEnvironment = "development" | "production" | "test";
 
 export interface AppConfig {
+  readonly conecta: ConectaConfig;
   readonly corsAllowedOrigins: ReadonlySet<string>;
   readonly firebaseProjectId: string | undefined;
   readonly firestore: FirestoreConfig;
@@ -22,6 +30,20 @@ export interface AppConfig {
   readonly port: number;
   readonly rag: RagConfig;
   readonly session: SessionConfig;
+}
+
+export interface ConectaConfig {
+  readonly tokenUrl: string;
+  readonly graphqlUrl: string;
+  readonly clientId: string;
+  readonly clientSecret: string;
+  readonly scope: string;
+  readonly xUserKey: string;
+  readonly tokenTimeoutMs: number;
+  readonly graphqlTimeoutMs: number;
+  readonly tokenRefreshMarginMs: number;
+  readonly breakerFailureThreshold: number;
+  readonly breakerRecoveryMs: number;
 }
 
 export interface FirestoreConfig {
@@ -208,6 +230,95 @@ function parseGeminiLocation(rawLocation: string | undefined): string {
   return location;
 }
 
+/** Require a non-empty secret, naming the variable but never exposing its value. */
+function parseRequiredSecret(name: string, rawValue: string | undefined): string {
+  const normalizedValue = rawValue?.trim() ?? "";
+  if (normalizedValue === "") {
+    throw new Error(`Missing required environment variable: ${name}.`);
+  }
+
+  return normalizedValue;
+}
+
+/** Validate an allowed HTTPS endpoint for the Conecta external integration. */
+function parseConectaHttpsUrl(name: string, rawValue: string | undefined): string {
+  const normalizedValue = parseRequiredSecret(name, rawValue);
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(normalizedValue);
+  } catch {
+    throw new Error(`Invalid ${name} configuration.`);
+  }
+
+  if (
+    parsedUrl.protocol !== "https:" ||
+    parsedUrl.username !== "" ||
+    parsedUrl.password !== "" ||
+    !ALLOWED_CONECTA_HOSTS.has(parsedUrl.hostname)
+  ) {
+    throw new Error(`Invalid ${name} configuration.`);
+  }
+
+  return parsedUrl.toString();
+}
+
+/** Parse a bounded positive integration setting or use its documented default. */
+function parseNumberWithDefault(name: string, rawValue: string | undefined, fallback: number): number {
+  const normalizedValue = rawValue?.trim() ?? "";
+  if (normalizedValue === "") {
+    return fallback;
+  }
+
+  if (!/^\d+$/.test(normalizedValue)) {
+    throw new Error(`Invalid ${name} configuration.`);
+  }
+
+  const value = Number(normalizedValue);
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new Error(`Invalid ${name} configuration.`);
+  }
+
+  return value;
+}
+
+/** Load and validate the Conecta DataOps configuration from environment variables. */
+function parseConectaConfig(): ConectaConfig {
+  return {
+    tokenUrl: parseConectaHttpsUrl("CONECTA_TOKEN_URL", process.env.CONECTA_TOKEN_URL),
+    graphqlUrl: parseConectaHttpsUrl("CONECTA_GRAPHQL_URL", process.env.CONECTA_GRAPHQL_URL),
+    clientId: parseRequiredSecret("CONECTA_CLIENT_ID", process.env.CONECTA_CLIENT_ID),
+    clientSecret: parseRequiredSecret("CONECTA_CLIENT_SECRET", process.env.CONECTA_CLIENT_SECRET),
+    scope: process.env.CONECTA_SCOPE?.trim() || DEFAULT_CONECTA_SCOPE,
+    xUserKey: parseRequiredSecret("CONECTA_X_USER_KEY", process.env.CONECTA_X_USER_KEY),
+    tokenTimeoutMs: parseNumberWithDefault(
+      "CONECTA_TOKEN_TIMEOUT_MS",
+      process.env.CONECTA_TOKEN_TIMEOUT_MS,
+      DEFAULT_CONECTA_TOKEN_TIMEOUT_MS,
+    ),
+    graphqlTimeoutMs: parseNumberWithDefault(
+      "CONECTA_GRAPHQL_TIMEOUT_MS",
+      process.env.CONECTA_GRAPHQL_TIMEOUT_MS,
+      DEFAULT_CONECTA_GRAPHQL_TIMEOUT_MS,
+    ),
+    tokenRefreshMarginMs: parseNumberWithDefault(
+      "CONECTA_TOKEN_REFRESH_MARGIN_MS",
+      process.env.CONECTA_TOKEN_REFRESH_MARGIN_MS,
+      DEFAULT_CONECTA_TOKEN_REFRESH_MARGIN_MS,
+    ),
+    breakerFailureThreshold: parseNumberWithDefault(
+      "CONECTA_BREAKER_FAILURE_THRESHOLD",
+      process.env.CONECTA_BREAKER_FAILURE_THRESHOLD,
+      DEFAULT_CONECTA_BREAKER_FAILURE_THRESHOLD,
+    ),
+    breakerRecoveryMs: parseNumberWithDefault(
+      "CONECTA_BREAKER_RECOVERY_MS",
+      process.env.CONECTA_BREAKER_RECOVERY_MS,
+      DEFAULT_CONECTA_BREAKER_RECOVERY_MS,
+    ),
+  };
+}
+
 /** Load immutable, validated service configuration from environment variables. */
 function loadConfig(): AppConfig {
   const environment = parseEnvironment(process.env.NODE_ENV);
@@ -220,6 +331,7 @@ function loadConfig(): AppConfig {
   }
 
   return Object.freeze({
+    conecta: Object.freeze(parseConectaConfig()),
     corsAllowedOrigins: parseCorsAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS, isProduction),
     firebaseProjectId: parseFirebaseProjectId(process.env.FIREBASE_PROJECT_ID ?? process.env.GOOGLE_CLOUD_PROJECT),
     firestore: Object.freeze({

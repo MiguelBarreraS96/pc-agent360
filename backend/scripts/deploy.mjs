@@ -3,8 +3,12 @@ import { spawnSync } from 'node:child_process';
 const PROJECT_ID = 'sb-dominique-ai';
 const REGION = 'us-central1';
 const SERVICE_NAME = 'bk-agent360';
+const CONECTA_SECRET_REFERENCES = [
+  'CONECTA_CLIENT_ID=conecta-client-id:latest',
+  'CONECTA_CLIENT_SECRET=conecta-client-secret:latest',
+  'CONECTA_X_USER_KEY=conecta-x-user-key:latest',
+];
 const REQUIRED_VARIABLES = [
-  'CORS_ALLOWED_ORIGIN',
   'FIREBASE_PROJECT_ID',
   'SESSION_COOKIE_SAME_SITE',
   'SESSION_INACTIVITY_TIMEOUT_SECONDS',
@@ -13,12 +17,16 @@ const REQUIRED_VARIABLES = [
   'DISCOVERY_ENGINE_LOCATION',
   'GEMINI_MODEL',
   'GEMINI_LOCATION',
+  'CONECTA_TOKEN_URL',
+  'CONECTA_GRAPHQL_URL',
 ];
+const ALLOWED_CONECTA_HOSTS = new Set(['api-conecta.segurosbolivar.com']);
 
 /** Read deployment inputs without accepting secret material directly. */
 function readDeploymentConfig(environment) {
   const values = Object.fromEntries(REQUIRED_VARIABLES.map((name) => [name, readRequiredValue(name, environment)]));
-  validateOrigin(values.CORS_ALLOWED_ORIGIN);
+  const corsAllowedOrigins = readCorsAllowedOrigins(environment);
+
   validateFirebaseProjectId(values.FIREBASE_PROJECT_ID);
   validateSameSite(values.SESSION_COOKIE_SAME_SITE);
   validateInactivityTimeout(values.SESSION_INACTIVITY_TIMEOUT_SECONDS);
@@ -27,7 +35,10 @@ function readDeploymentConfig(environment) {
   validateDiscoveryEngineLocation(values.DISCOVERY_ENGINE_LOCATION);
   validateGeminiModel(values.GEMINI_MODEL);
   validateGeminiLocation(values.GEMINI_LOCATION);
-  return values;
+  validateConectaUrl(values.CONECTA_TOKEN_URL, 'CONECTA_TOKEN_URL');
+  validateConectaUrl(values.CONECTA_GRAPHQL_URL, 'CONECTA_GRAPHQL_URL');
+
+  return { ...values, CORS_ALLOWED_ORIGINS: corsAllowedOrigins };
 }
 
 /** Read one bounded, command-safe environment value. */
@@ -44,11 +55,44 @@ function readRequiredValue(name, environment) {
   return value;
 }
 
-/** Allow exactly one HTTPS browser origin for this environment deployment. */
+/** Read one or more exact browser origins while accepting the previous singular variable as a fallback. */
+function readCorsAllowedOrigins(environment) {
+  const rawOrigins = environment.CORS_ALLOWED_ORIGINS?.trim() || environment.CORS_ALLOWED_ORIGIN?.trim();
+  if (!rawOrigins) {
+    throw new Error('CORS_ALLOWED_ORIGINS is required.');
+  }
+
+  if (rawOrigins.includes('\n') || rawOrigins.includes('\r')) {
+    throw new Error('CORS_ALLOWED_ORIGINS contains an unsupported character.');
+  }
+
+  const origins = rawOrigins.split(',').map((origin) => origin.trim());
+  if (origins.some((origin) => origin === '')) {
+    throw new Error('CORS_ALLOWED_ORIGINS contains an invalid origin.');
+  }
+
+  origins.forEach(validateOrigin);
+  return origins.join(',');
+}
+
+/** Allow exact HTTPS browser origins without path segments. */
 function validateOrigin(value) {
   const origin = new URL(value);
   if (origin.protocol !== 'https:' || origin.origin !== value) {
-    throw new Error('CORS_ALLOWED_ORIGIN must be an exact HTTPS origin without a path.');
+    throw new Error('CORS_ALLOWED_ORIGINS must contain exact HTTPS origins without paths.');
+  }
+}
+
+/** Validate an institutional HTTPS endpoint used by the Conecta integration. */
+function validateConectaUrl(value, variableName) {
+  const endpoint = new URL(value);
+  if (
+    endpoint.protocol !== 'https:' ||
+    endpoint.username ||
+    endpoint.password ||
+    !ALLOWED_CONECTA_HOSTS.has(endpoint.hostname)
+  ) {
+    throw new Error(`${variableName} is invalid.`);
   }
 }
 
@@ -113,12 +157,12 @@ function validateGeminiLocation(value) {
   }
 }
 
-/** Deploy only after all non-secret configuration and the secret reference validate. */
+/** Deploy only after all non-secret configuration and secret references validate. */
 function deploy(config) {
   const environmentValues = [
     'NODE_ENV=production',
     'HOST=0.0.0.0',
-    `CORS_ALLOWED_ORIGINS=${config.CORS_ALLOWED_ORIGIN}`,
+    `CORS_ALLOWED_ORIGINS=${config.CORS_ALLOWED_ORIGINS}`,
     `FIREBASE_PROJECT_ID=${config.FIREBASE_PROJECT_ID}`,
     `SESSION_COOKIE_SAME_SITE=${config.SESSION_COOKIE_SAME_SITE}`,
     `SESSION_INACTIVITY_TIMEOUT_SECONDS=${config.SESSION_INACTIVITY_TIMEOUT_SECONDS}`,
@@ -127,6 +171,8 @@ function deploy(config) {
     `DISCOVERY_ENGINE_LOCATION=${config.DISCOVERY_ENGINE_LOCATION}`,
     `GEMINI_MODEL=${config.GEMINI_MODEL}`,
     `GEMINI_LOCATION=${config.GEMINI_LOCATION}`,
+    `CONECTA_TOKEN_URL=${config.CONECTA_TOKEN_URL}`,
+    `CONECTA_GRAPHQL_URL=${config.CONECTA_GRAPHQL_URL}`,
   ].join(',');
   const result = spawnSync(
     'gcloud',
@@ -159,6 +205,8 @@ function deploy(config) {
       '2',
       '--set-env-vars',
       environmentValues,
+      '--set-secrets',
+      CONECTA_SECRET_REFERENCES.join(','),
       '--quiet',
     ],
     { stdio: 'inherit' },

@@ -81,4 +81,3 @@ export class EmailLinkCallbackComponent implements OnInit {
     }
   }
 }
-

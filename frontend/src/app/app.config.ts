@@ -1,3 +1,4 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
   inject,
@@ -5,7 +6,6 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection,
 } from '@angular/core';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { Auth, inMemoryPersistence, initializeAuth } from 'firebase/auth';
 import { provideRouter } from '@angular/router';

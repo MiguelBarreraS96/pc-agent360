@@ -18,13 +18,30 @@ y este proyecto adhiere a [Versionamiento Semántico](https://semver.org/lang/es
 - Se configuró el flujo RAG para usar la ubicación regional `us`, verificar recursos existentes y crear el Engine solo tras confirmar el DataStore.
 - Se agregó un mini agente por producto que prueba el RAG y usa Gemini solo con evidencia recuperada y redactada.
 - Se restauró la ruta de colección de Discovery Engine requerida antes de iniciar la creación del DataStore.
+- Se consolidó Consulta Cliente 360 con la configuración runtime del frontend para apuntar al backend autorizado sin duplicar URLs por ambiente.
+- Se integró la vista protegida Consulta Cliente 360 en la navegación de escritorio y móvil para usuarios con permiso `agent:read`.
+- Se crearon los requisitos, diseño técnico y plan de implementación de Consulta Cliente 360 con patrón BFF, OAuth2, GraphQL, circuit breaker, enmascaramiento de PII y pruebas de correctitud.
+- Se declararon variables de entorno de Conecta con placeholders no secretos, timeouts documentados y validación de endpoints HTTPS institucionales.
+- Se agregaron las dependencias de Cliente 360 y pruebas con versiones exactas, junto con el script Jest y su configuración.
+- Se crearon los tipos de Conecta, el DTO allowlist de respuesta enmascarada, los modelos Angular y el esquema Zod estricto para la consulta por documento.
+- Se creó el servicio frontend de Consulta Cliente 360 con timeout de 15 segundos, estados tipados y llamadas únicamente al BFF propio.
+- Se crearon los clientes GraphQL y OAuth2 de Conecta, la caché de token, el circuit breaker, el servicio de consulta y el controlador con errores controlados.
+- Se crearon el componente, plantilla y estilos responsivos de Consulta Cliente 360 con formulario reactivo, accesibilidad y visualización de resultados sin PII completa.
+- Se creó la ruta versionada `POST /seguros/api/v1/cliente360/consulta` y se protegió con autenticación de sesión, permiso `agent:read` y CSRF.
+- Se agregó configuración no sensible de Cloud Run para Cliente 360 y referencias de Secret Manager para sus credenciales de integración.
+- Se creó el spec `fix-consulta-cliente-360-graphql` para documentar la causa raíz y el plan de corrección del contrato GraphQL de Conecta.
 
 ### Cambiado
-- Se actualizaron las configuraciones de frontend y backend para obtener valores públicos de Firebase en runtime y dependencias exactas pendientes de resolución por JFrog.
+- Se actualizó el script de desarrollo para cargar `.env` automáticamente mediante `tsx watch --env-file=.env`.
+- Se actualizaron los requisitos de Consulta Cliente 360 para incorporar un botón de envío, la disposición lado a lado de los resultados y el mensaje específico cuando no hay información.
+- Se consolidaron las configuraciones de frontend y backend para obtener valores públicos de Firebase en runtime y mantener dependencias exactas.
 - Se configuró la imagen frontend para renderizar su configuración y CSP desde variables de ambiente, rechazando placeholders al iniciar.
-- Se agregaron preflights de despliegue para validar variables públicas de frontend y referencias de Secret Manager de backend antes de invocar Cloud Run.
+- Se agregaron preflights de despliegue para validar variables públicas de frontend y referencias de Secret Manager antes de invocar Cloud Run.
+- Se crearon los proyectos iniciales de backend Node.js con Express y frontend Angular, junto con sus configuraciones de compilación, contrato OpenAPI de disponibilidad y documentación de arranque.
 
 ### Corregido
+- Se corrigió el `502 UPSTREAM_ERROR` de Consulta Cliente 360 alineando la consulta GraphQL con el contrato real de Conecta, incluidos el argumento `ClienteInput!`, el fragmento `Cliente360NaturalType` y los tipos de celular y aptitudes.
+- Se corrigió el bloqueo de Consulta Cliente 360 desde el frontend desplegado al permitir el backend Cloud Run en la CSP y los orígenes HTTPS autorizados en CORS.
 - Se sustituyó la restauración mutante por GET por un bootstrap POST con `Origin` exacto y CSRF efímero, sin extender la expiración máxima ni la inactividad.
 - Se corrigió la validación de códigos HTTP del manejador de errores para permitir la compilación TypeScript del backend en Cloud Build.
 - Se habilitó la edición controlada de permisos del rol protegido ADMIN para asignar el acceso de gestión de productos desde la interfaz administrativa.

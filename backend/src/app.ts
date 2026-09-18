@@ -7,6 +7,7 @@ import { createUsersRouter } from "./access/users.router";
 import { createAuthRouter } from "./auth/auth.router";
 import { createChatRouter } from "./chat/chat.router";
 import { createGeminiPreviewRouter } from "./chat/gemini-preview.router";
+import { CLIENTE360_CONSULTA_PATH, cliente360Router } from "./cliente360/cliente360-router";
 import type { ApplicationDependencies } from "./composition";
 import { forbidden } from "./errors";
 import { correlationIdMiddleware } from "./middleware/correlation-id";
@@ -130,6 +131,13 @@ export function createApp(dependencies: ApplicationDependencies): Express {
     );
   }
   app.get("/api/v1/health", healthHandler);
+  app.use(
+    CLIENTE360_CONSULTA_PATH,
+    dependencies.authenticate,
+    dependencies.requireAgentRead,
+    dependencies.requireCsrf,
+  );
+  app.use(cliente360Router);
   app.use(notFoundHandler);
   app.use(errorHandler);
 

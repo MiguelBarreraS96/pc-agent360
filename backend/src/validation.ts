@@ -38,7 +38,7 @@ export function normalizeText(value: string, maximumLength: number): string {
 }
 
 /** Parse a strict request payload and hide schema diagnostics from clients. */
-export function parseInput<Output>(schema: z.ZodType<Output>, input: unknown): Output {
+export function parseInput<Schema extends z.ZodTypeAny>(schema: Schema, input: unknown): z.output<Schema> {
   const parsedInput = schema.safeParse(input);
   if (!parsedInput.success) {
     throw badRequest();

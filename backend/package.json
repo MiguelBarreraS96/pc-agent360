@@ -2,7 +2,7 @@
   "name": "pc-agent360-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "API de autenticación Firebase, sesiones y control de acceso para pc-agent360.",
+  "description": "API de autenticación Firebase, control de acceso, RAG y Cliente 360 para pc-agent360.",
   "engines": {
     "node": ">=20.0.0"
   },
@@ -11,6 +11,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "jest --config jest.config.js",
     "deploy": "node scripts/deploy.mjs",
     "seed": "node --env-file=.env scripts/seed-firestore.mjs"
   },
@@ -29,7 +30,13 @@
     "@types/busboy": "1.5.4",
     "@types/cors": "2.8.17",
     "@types/express": "4.17.21",
+    "@types/jest": "29.5.14",
     "@types/node": "20.17.24",
+    "@types/supertest": "6.0.2",
+    "fast-check": "3.23.1",
+    "jest": "29.7.0",
+    "supertest": "7.0.0",
+    "ts-jest": "29.2.5",
     "tsx": "4.19.3",
     "typescript": "5.7.3"
   }

@@ -1,0 +1,182 @@
+<main class="consulta-page" aria-labelledby="consulta-title">
+  <h1 id="consulta-title">Consulta Cliente 360</h1>
+
+  <div class="layout">
+    <!-- Formulario de consulta (Req 1.1–1.7) -->
+    <section class="form-panel" aria-labelledby="form-title">
+      <h2 id="form-title">Datos de consulta</h2>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+        <div class="field">
+          <label for="tipoDocumento">Tipo de documento</label>
+          <select id="tipoDocumento" formControlName="tipoDocumento">
+            <option value="CC">CC</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="numeroDocumento">Número de documento</label>
+          <input
+            id="numeroDocumento"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            formControlName="numeroDocumento"
+            maxlength="15"
+            aria-describedby="numeroDocumento-help"
+            [attr.aria-invalid]="hasPatternError || hasRequiredError ? 'true' : null"
+          />
+
+          <p id="numeroDocumento-help" class="field-help">
+            Solo dígitos (0-9), longitud entre 1 y 15.
+          </p>
+
+          @if (hasPatternError) {
+            <p class="field-error" role="alert">
+              El número de documento solo admite dígitos (0-9) con una longitud
+              máxima de 15 caracteres.
+            </p>
+          } @else if (hasRequiredError) {
+            <p class="field-error" role="alert">
+              Ingrese el número de documento.
+            </p>
+          }
+        </div>
+
+        <button
+          type="submit"
+          class="submit-button"
+          [disabled]="form.invalid || state() === 'loading'"
+        >
+          Enviar
+        </button>
+      </form>
+    </section>
+
+    <!-- Área de resultados (Req 2.1–2.7) -->
+    <section class="results-panel" aria-labelledby="results-title" aria-live="polite">
+      <h2 id="results-title">Resultados</h2>
+
+      @switch (state()) {
+        @case ('idle') {
+          <p class="results-empty">Ingrese los datos y presione "Enviar" para consultar.</p>
+        }
+
+        @case ('loading') {
+          <div class="results-loading" role="status">
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Consultando información del cliente…</span>
+          </div>
+        }
+
+        @case ('noData') {
+          <p class="results-no-data">No existe información de este cliente</p>
+        }
+
+        @case ('error') {
+          <p class="results-error" role="alert">
+            No se pudo completar la consulta. Intente nuevamente más tarde.
+          </p>
+        }
+
+        @case ('success') {
+          @if (cliente(); as data) {
+            <dl class="results-data">
+              <div class="results-group">
+                <h3>Demográficos</h3>
+                <div class="result-item">
+                  <dt>Edad</dt>
+                  <dd>{{ data.demografica.edad ?? noDisponible }}</dd>
+                </div>
+              </div>
+
+              <div class="results-group">
+                <h3>Contacto</h3>
+                <div class="result-item">
+                  <dt>Mejor celular</dt>
+                  <dd>
+                    @if (data.contacto.mejorCelular; as celular) {
+                      {{ celular.numeroCelular }}
+                      @if (celular.fuente) {
+                        <span class="fuente">({{ celular.fuente }})</span>
+                      }
+                    } @else {
+                      {{ noDisponible }}
+                    }
+                  </dd>
+                </div>
+                <div class="result-item">
+                  <dt>Celulares</dt>
+                  <dd>
+                    @if (data.contacto.celulares.length > 0) {
+                      <ul class="celulares-list">
+                        @for (celular of data.contacto.celulares; track $index) {
+                          <li>
+                            {{ celular.numeroCelular }}
+                            @if (celular.fuente) {
+                              <span class="fuente">({{ celular.fuente }})</span>
+                            }
+                          </li>
+                        }
+                      </ul>
+                    } @else {
+                      {{ noDisponible }}
+                    }
+                  </dd>
+                </div>
+              </div>
+
+              <div class="results-group">
+                <h3>Cliente 360</h3>
+                <div class="result-item">
+                  <dt>CLV</dt>
+                  <dd>{{ data.cliente360.clv ?? noDisponible }}</dd>
+                </div>
+                <div class="result-item">
+                  <dt>Categoría de ingresos</dt>
+                  <dd>{{ data.cliente360.categoriaIngresos ?? noDisponible }}</dd>
+                </div>
+                <div class="result-item">
+                  <dt>Antigüedad</dt>
+                  <dd>{{ data.cliente360.antiguedad ?? noDisponible }}</dd>
+                </div>
+                <div class="result-item">
+                  <dt>Ciudad</dt>
+                  <dd>{{ data.cliente360.ciudad ?? noDisponible }}</dd>
+                </div>
+                <div class="result-item">
+                  <dt>Producto recomendado</dt>
+                  <dd>{{ data.cliente360.productoRecomendado ?? noDisponible }}</dd>
+                </div>
+                <div class="result-item">
+                  <dt>Apto autos</dt>
+                  <dd>{{ data.cliente360.aptoAutos ?? noDisponible }}</dd>
+                </div>
+                <div class="result-item">
+                  <dt>Apto hogar</dt>
+                  <dd>{{ data.cliente360.aptoHogar ?? noDisponible }}</dd>
+                </div>
+                <div class="result-item">
+                  <dt>Apto salud</dt>
+                  <dd>{{ data.cliente360.aptoSalud ?? noDisponible }}</dd>
+                </div>
+                <div class="result-item">
+                  <dt>Apto vida</dt>
+                  <dd>{{ data.cliente360.aptoVida ?? noDisponible }}</dd>
+                </div>
+              </div>
+
+              <div class="results-group">
+                <h3>Ingresos</h3>
+                <div class="result-item">
+                  <dt>Valor de ingresos</dt>
+                  <dd>{{ data.valorIngresos ?? noDisponible }}</dd>
+                </div>
+              </div>
+            </dl>
+          }
+        }
+      }
+    </section>
+  </div>
+</main>

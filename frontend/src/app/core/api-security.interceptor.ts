@@ -7,8 +7,9 @@ import { RUNTIME_CONFIG } from './runtime-config';
 import { SessionStateService } from './session-state.service';
 
 const MUTATING_METHODS = new Set(['DELETE', 'PATCH', 'POST', 'PUT']);
+const CLIENTE360_API_PREFIX = '/seguros/api/v1';
 
-/** Add credentials, correlation and CSRF only to the configured backend origin. */
+/** Add credentials, correlation and CSRF only to configured backend API paths. */
 export const apiSecurityInterceptor: HttpInterceptorFn = (request, next) => {
   const runtimeConfig = inject(RUNTIME_CONFIG);
   const router = inject(Router);
@@ -23,8 +24,7 @@ export const apiSecurityInterceptor: HttpInterceptorFn = (request, next) => {
   }
 
   const basePath = apiUrl.pathname.replace(/\/$/, '');
-
-  if (requestUrl.origin !== apiUrl.origin || !requestUrl.pathname.startsWith(`${basePath}/`)) {
+  if (!isConfiguredBackendRequest(requestUrl, apiUrl, basePath)) {
     return next(request);
   }
 
@@ -51,6 +51,19 @@ export const apiSecurityInterceptor: HttpInterceptorFn = (request, next) => {
     }),
   );
 };
+
+/** Determine whether a request stays within one of the authenticated backend API prefixes. */
+function isConfiguredBackendRequest(requestUrl: URL, apiUrl: URL, basePath: string): boolean {
+  return (
+    requestUrl.origin === apiUrl.origin &&
+    (hasPathPrefix(requestUrl.pathname, basePath) || hasPathPrefix(requestUrl.pathname, CLIENTE360_API_PREFIX))
+  );
+}
+
+/** Match an exact API prefix without allowing similarly named paths. */
+function hasPathPrefix(pathname: string, pathPrefix: string): boolean {
+  return pathname === pathPrefix || pathname.startsWith(`${pathPrefix}/`);
+}
 
 /** Determine whether a backend mutation already has an active cookie session to protect. */
 function requiresCsrfToken(method: string, path: string, basePath: string): boolean {
