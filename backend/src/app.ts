@@ -101,6 +101,7 @@ export function createApp(dependencies: ApplicationDependencies): Express {
     createProductsRouter({
       authenticate: dependencies.authenticate,
       productDocumentsService: dependencies.productDocumentsService,
+      productRagAgentService: dependencies.productRagAgentService,
       productsService: dependencies.productsService,
       requireAdmin: dependencies.requireAdmin,
       requireCsrf: dependencies.requireCsrf,

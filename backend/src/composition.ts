@@ -17,6 +17,7 @@ import type { AppConfig } from "./config";
 import { createRateLimitMiddleware } from "./middleware/rate-limit";
 import { ProductDocumentRepository } from "./products/product-document.repository";
 import { ProductDocumentsService } from "./products/product-documents.service";
+import { ProductRagAgentService } from "./products/product-rag-agent.service";
 import { ProductRepository } from "./products/product.repository";
 import { ProductsService } from "./products/products.service";
 import { createDiscoveryEngineClients } from "./rag/discovery-engine.client";
@@ -35,6 +36,7 @@ export interface ApplicationDependencies {
   readonly chatService: ChatService;
   readonly config: AppConfig;
   readonly productDocumentsService: ProductDocumentsService;
+  readonly productRagAgentService: ProductRagAgentService;
   readonly productsService: ProductsService;
   readonly rateLimitAuthentication: import("express").RequestHandler;
   readonly rateLimitSession: import("express").RequestHandler;
@@ -97,6 +99,7 @@ export function createApplicationDependencies(config: AppConfig, firestore: Fire
 
   const geminiClient = createGeminiClient(config.firebaseProjectId, config.gemini.location);
   const geminiGateway = new GeminiGateway(geminiClient, config.gemini.model);
+  const productRagAgentService = new ProductRagAgentService(productsService, geminiGateway);
   const chatService = new ChatService(productsService, discoveryEngineGateway, geminiGateway);
 
   return {
@@ -105,6 +108,7 @@ export function createApplicationDependencies(config: AppConfig, firestore: Fire
     chatService,
     config,
     productDocumentsService,
+    productRagAgentService,
     productsService,
     rateLimitAuthentication: createRateLimitMiddleware({
       maxRequests: AUTHENTICATION_RATE_LIMIT_MAX_REQUESTS,

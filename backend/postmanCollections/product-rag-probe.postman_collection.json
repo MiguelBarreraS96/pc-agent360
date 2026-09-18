@@ -1,0 +1,72 @@
+{
+  "info": {
+    "_postman_id": "9d1ab3f1-6cc5-4a6c-9ce2-b8ea555ea212",
+    "name": "pc-agent360 Product RAG probe",
+    "description": "Pruebas manuales del probe RAG y del mini agente Gemini. Requiere una cookie de sesión autorizada y un CSRF vigente; no incluya tokens, correos ni datos reales en esta colección.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3000"
+    },
+    {
+      "key": "csrfToken",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": "00000000-0000-4000-8000-000000000000"
+    }
+  ],
+  "item": [
+    {
+      "name": "POST /api/v1/admin/products/{productId}/rag/probe",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrfToken}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"¿Qué cobertura aplica?\",\n  \"pageSize\": 5\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/admin/products/{{productId}}/rag/probe"
+      },
+      "response": []
+    },
+    {
+      "name": "POST /api/v1/admin/products/{productId}/rag/ask",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "X-CSRF-Token",
+            "value": "{{csrfToken}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"¿Qué cobertura aplica?\",\n  \"pageSize\": 5\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/admin/products/{{productId}}/rag/ask"
+      },
+      "response": []
+    }
+  ]
+}

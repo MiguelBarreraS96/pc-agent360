@@ -16,6 +16,7 @@ y este proyecto adhiere a [Versionamiento Semántico](https://semver.org/lang/es
 - Se envió el nombre normalizado del producto como `displayName` al crear el DataStore y el Engine de Vertex AI Search.
 - Se persistieron proyecto, ubicación e IDs deterministas de DataStore y Engine para el ciclo de aprovisionamiento RAG.
 - Se configuró el flujo RAG para usar la ubicación regional `us`, verificar recursos existentes y crear el Engine solo tras confirmar el DataStore.
+- Se agregaron endpoints de probe RAG y mini agente Gemini por producto, con evidencia recuperada, validación estricta y redacción de datos sensibles.
 - Se restauró la ruta de colección de Discovery Engine requerida antes de iniciar la creación del DataStore.
 
 ### Corregido

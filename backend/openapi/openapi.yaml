@@ -780,6 +780,89 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/admin/products/{productId}/rag/probe:
+    post:
+      tags: [Products]
+      summary: Ejecuta un probe RAG sobre el Engine activo de un producto
+      description: >-
+        Requiere el rol ADMIN, products:read y un CSRF válido. Recupera evidencia de Discovery
+        Engine sin invocar Gemini. La consulta se normaliza, pageSize está limitado entre 1 y 5,
+        y se rechazan claves no reconocidas.
+      operationId: probeProductRag
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProductId'
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RagProbeRequest'
+      responses:
+        '200':
+          description: Evidencia y resumen recuperados desde Discovery Engine.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RagProbeResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/admin/products/{productId}/rag/ask:
+    post:
+      tags: [Products]
+      summary: Responde con Gemini usando exclusivamente la evidencia del probe RAG
+      description: >-
+        Requiere el rol ADMIN, products:read y un CSRF válido. Ejecuta primero el probe RAG;
+        Gemini solo recibe fragmentos recuperados y no se invoca si no hay evidencia útil.
+      operationId: askProductRag
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProductId'
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RagProbeRequest'
+      responses:
+        '200':
+          description: Respuesta del agente junto con la evidencia recuperada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductRagAgentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/products/{productId}/chat:
     post:
       tags: [Agent]
@@ -1249,6 +1332,62 @@ components:
           type: string
           minLength: 1
           maxLength: 80
+    RagProbeRequest:
+      type: object
+      additionalProperties: false
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 5
+          default: 5
+    RagProbeResult:
+      type: object
+      additionalProperties: false
+      required: [id, title, snippet, link]
+      properties:
+        id:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        snippet:
+          type: string
+          nullable: true
+        link:
+          type: string
+          nullable: true
+    RagProbeResponse:
+      type: object
+      additionalProperties: false
+      required: [query, results, summary]
+      properties:
+        query:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RagProbeResult'
+        summary:
+          type: string
+          nullable: true
+    ProductRagAgentResponse:
+      type: object
+      additionalProperties: false
+      required: [answer, usedRag, probe]
+      properties:
+        answer:
+          type: string
+        usedRag:
+          type: boolean
+        probe:
+          $ref: '#/components/schemas/RagProbeResponse'
     ProductDocumentStatus:
       type: string
       enum: [indexing, indexed, error]

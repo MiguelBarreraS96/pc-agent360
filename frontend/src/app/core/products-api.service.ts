@@ -9,7 +9,10 @@ import {
   ProductDocumentsEnvelope,
   ProductDto,
   ProductEnvelope,
+  ProductRagAgentResponse,
   ProductsEnvelope,
+  RagProbeRequest,
+  RagProbeResponse,
   UpdateProductRequest,
 } from './api.models';
 import { RUNTIME_CONFIG, RuntimeConfig } from './runtime-config';
@@ -38,6 +41,26 @@ export class ProductsApiService {
       this.http.get<ProductEnvelope>(this.endpoint(`/admin/products/${encodeURIComponent(productId)}`)),
     );
     return response.product;
+  }
+
+  /** Retrieve bounded Discovery Engine evidence without invoking Gemini. */
+  async probeProductRag(productId: string, request: RagProbeRequest): Promise<RagProbeResponse> {
+    return firstValueFrom(
+      this.http.post<RagProbeResponse>(
+        this.endpoint(`/admin/products/${encodeURIComponent(productId)}/rag/probe`),
+        request,
+      ),
+    );
+  }
+
+  /** Retrieve product evidence and ask Gemini to answer exclusively from that evidence. */
+  async askProductRag(productId: string, request: RagProbeRequest): Promise<ProductRagAgentResponse> {
+    return firstValueFrom(
+      this.http.post<ProductRagAgentResponse>(
+        this.endpoint(`/admin/products/${encodeURIComponent(productId)}/rag/ask`),
+        request,
+      ),
+    );
   }
 
   /** Update a product's name or icon; never affects its RAG engine. */

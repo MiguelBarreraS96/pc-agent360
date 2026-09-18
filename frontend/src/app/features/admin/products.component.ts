@@ -8,6 +8,7 @@ import { IconPickerComponent } from '../../core/icon-picker.component';
 import { nonBlankValidator } from '../../core/input-normalization';
 import { ProductsApiService } from '../../core/products-api.service';
 import { ProductDocumentsComponent } from './product-documents.component';
+import { ProductRagAgentComponent } from './product-rag-agent.component';
 
 const RAG_STATE_LABELS: Readonly<Record<ProductRagState, string>> = {
   none: 'Sin motor',
@@ -25,7 +26,7 @@ const RAG_STATE_STYLES: Readonly<Record<ProductRagState, { background: string; c
 
 @Component({
   selector: 'app-products',
-  imports: [ReactiveFormsModule, IconPickerComponent, ProductDocumentsComponent],
+  imports: [ReactiveFormsModule, IconPickerComponent, ProductDocumentsComponent, ProductRagAgentComponent],
   templateUrl: './products.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -35,6 +36,7 @@ export class ProductsComponent implements OnInit {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly productsApi = inject(ProductsApiService);
 
+  readonly agentProduct = signal<ProductDto | null>(null);
   readonly documentsProduct = signal<ProductDto | null>(null);
   readonly editingProduct = signal<ProductDto | null>(null);
   readonly errorMessage = signal<string | null>(null);
@@ -47,7 +49,7 @@ export class ProductsComponent implements OnInit {
   readonly products = signal<readonly ProductDto[]>([]);
 
   private readonly lockBodyScroll = effect(() => {
-    this.document.body.style.overflow = this.isModalOpen() || this.documentsProduct() !== null ? 'hidden' : '';
+    this.document.body.style.overflow = this.isModalOpen() || this.documentsProduct() !== null || this.agentProduct() !== null ? 'hidden' : '';
   });
 
   readonly form = this.formBuilder.group({
@@ -93,6 +95,11 @@ export class ProductsComponent implements OnInit {
   /** Close whichever modal is open when the user presses Escape anywhere on the page. */
   @HostListener('document:keydown.escape')
   onEscape(): void {
+    if (this.agentProduct() !== null) {
+      this.closeAgent();
+      return;
+    }
+
     if (this.documentsProduct() !== null) {
       this.closeDocuments();
       return;
@@ -113,6 +120,18 @@ export class ProductsComponent implements OnInit {
   openEditModal(product: ProductDto): void {
     this.prepareEdit(product);
     this.isModalOpen.set(true);
+  }
+
+  /** Open the product-specific RAG agent only after its search engine is active. */
+  openAgent(product: ProductDto): void {
+    if (product.rag.state === 'active') {
+      this.agentProduct.set(product);
+    }
+  }
+
+  /** Close the product-specific RAG agent. */
+  closeAgent(): void {
+    this.agentProduct.set(null);
   }
 
   /** Open the RAG knowledge base manager for one product. */
@@ -194,6 +213,9 @@ export class ProductsComponent implements OnInit {
       }
       if (this.documentsProduct()?.id === product.id) {
         this.closeDocuments();
+      }
+      if (this.agentProduct()?.id === product.id) {
+        this.closeAgent();
       }
       await this.reload();
     } catch (error: unknown) {

@@ -227,6 +227,46 @@ export class DiscoveryEngineGateway {
     }
   }
 
+  /** Probe one active product engine with the bounded retrieval configuration used by the mini agent. */
+  public async probe(productId: string, input: RagProbeInput): Promise<RagProbeResponse> {
+    try {
+      const [results, , response] = await this.clients.searchServiceClient.search(
+        {
+          contentSearchSpec: {
+            extractiveContentSpec: {
+              maxExtractiveAnswerCount: 1,
+              maxExtractiveSegmentCount: 2,
+              numNextSegments: 1,
+              numPreviousSegments: 1,
+              returnExtractiveSegmentScore: true,
+            },
+            snippetSpec: {
+              maxSnippetCount: 3,
+              returnSnippet: true,
+            },
+            summarySpec: {
+              includeCitations: true,
+              summaryResultCount: Math.min(input.pageSize, 3),
+            },
+          },
+          languageCode: SEARCH_LANGUAGE_CODE,
+          pageSize: input.pageSize,
+          query: input.query,
+          servingConfig: servingConfigPath(this.projectId, this.location, productId),
+        },
+        { autoPaginate: false, timeout: SEARCH_TIMEOUT_MILLISECONDS },
+      );
+
+      return {
+        query: input.query,
+        results: results.map(toRagProbeResult),
+        summary: readProbeSummary(response),
+      };
+    } catch (error: unknown) {
+      throw new RagOperationError("SEARCH_FAILED", error);
+    }
+  }
+
   /** Search a product's Engine for grounding evidence: extractive segments, extractive answers, and snippets. */
   public async search(productId: string, query: string): Promise<RagSearchResult> {
     try {
@@ -253,6 +293,81 @@ export class DiscoveryEngineGateway {
       throw new RagOperationError("SEARCH_FAILED", error);
     }
   }
+}
+
+export interface RagProbeInput {
+  readonly pageSize: number;
+  readonly query: string;
+}
+
+export interface RagProbeResult {
+  readonly id: string | null;
+  readonly link: string | null;
+  readonly snippet: string | null;
+  readonly title: string | null;
+}
+
+export interface RagProbeResponse {
+  readonly query: string;
+  readonly results: readonly RagProbeResult[];
+  readonly summary: string | null;
+}
+
+/** Build one probe result with content ordered by extractive answer, segment, and then snippet. */
+function toRagProbeResult(result: SearchResult): RagProbeResult {
+  const derived = structToRecord(result.document?.derivedStructData ?? null);
+  const extractiveAnswer = readFirstContent(asRecordArray(derived.extractive_answers), "content");
+  const extractiveSegment = readScoredSegment(asRecordArray(derived.extractive_segments));
+  const snippet = readFirstContent(asRecordArray(derived.snippets), "snippet");
+
+  return {
+    id: toNullableString(result.id),
+    link: toNullableString(result.document?.content?.uri),
+    snippet: extractiveAnswer ?? extractiveSegment ?? snippet,
+    title: readStringField(derived, "title"),
+  };
+}
+
+/** Select the first non-empty content field from an ordered evidence collection. */
+function readFirstContent(records: readonly Record<string, unknown>[], contentKey: string): string | null {
+  for (const record of records) {
+    const content = readStringField(record, contentKey);
+    if (content !== null) {
+      return content;
+    }
+  }
+
+  return null;
+}
+
+/** Select the first extractive segment whose relevance score is greater than the required threshold. */
+function readScoredSegment(records: readonly Record<string, unknown>[]): string | null {
+  for (const record of records) {
+    const score = readNumberField(record, "relevanceScore", "relevance_score");
+    const content = readStringField(record, "content");
+    if (score !== null && score > 0.5 && content !== null) {
+      return content;
+    }
+  }
+
+  return null;
+}
+
+/** Read the optional generated summary without serializing the provider response into logs or clients. */
+function readProbeSummary(response: unknown): string | null {
+  if (!isRecord(response) || !isRecord(response.summary)) {
+    return null;
+  }
+
+  return toNullableString(response.summary.summaryText);
+}
+
+function toNullableString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() !== "" ? value : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 /** Pull evidence candidates (extractive segments, extractive answers, snippets) out of one raw search result. */

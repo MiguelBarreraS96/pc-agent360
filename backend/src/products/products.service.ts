@@ -1,6 +1,6 @@
 import { conflict, notFound } from "../errors";
 import { logEvent, type LogFields } from "../logger";
-import type { DiscoveryEngineGateway } from "../rag/discovery-engine.gateway";
+import type { DiscoveryEngineGateway, RagProbeResponse } from "../rag/discovery-engine.gateway";
 import { RagOperationError, toRagFailureLogDetails } from "../rag/rag.errors";
 import type { RagStorageGateway } from "../rag/gcs.gateway";
 import { buildProductObjectPrefix } from "../rag/rag.ids";
@@ -9,6 +9,7 @@ import { ProductDocumentRepository } from "./product-document.repository";
 import { ProductRepository } from "./product.repository";
 import type { Product } from "./products.models";
 import type { CreateProductInput, UpdateProductInput } from "./products.schemas";
+import type { RagProbeInput } from "./rag-probe.schemas";
 
 const SYSTEM_CORRELATION_ID = "system";
 type RagProvisioningStage = "data_store" | "engine";
@@ -77,6 +78,20 @@ export class ProductsService {
   /** Return every product without reconciling their RAG state (kept cheap for a listing). */
   public async listProducts(): Promise<readonly Product[]> {
     return this.productRepository.list();
+  }
+
+  /** Probe an active product engine using the strict retrieval configuration required by the mini agent. */
+  public async probeRag(
+    productId: string,
+    input: RagProbeInput,
+    correlationId = SYSTEM_CORRELATION_ID,
+  ): Promise<RagProbeResponse> {
+    const product = await this.getProduct(productId, correlationId);
+    if (product.rag.state !== "active") {
+      throw conflict();
+    }
+
+    return this.discoveryEngineGateway.probe(product.id, input);
   }
 
   /** Advance a product RAG state by checking Engine first, then DataStore, and creating only missing resources. */

@@ -12,6 +12,7 @@
 - Se envió el nombre normalizado del producto como `displayName` al crear el DataStore y el Engine de Vertex AI Search.
 - Se persistieron proyecto, ubicación e IDs deterministas de DataStore y Engine para el ciclo de aprovisionamiento RAG.
 - Se configuró el flujo RAG para usar la ubicación regional `us`, verificar recursos existentes y crear el Engine solo tras confirmar el DataStore.
+- Se agregó un mini agente por producto que prueba el RAG y usa Gemini solo con evidencia recuperada y redactada.
 - Se restauró la ruta de colección de Discovery Engine requerida antes de iniciar la creación del DataStore.
 
 ### Corregido

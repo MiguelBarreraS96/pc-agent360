@@ -135,6 +135,30 @@ export interface ProductDocumentsEnvelope {
   readonly documents: readonly ProductDocumentDto[];
 }
 
+export interface RagProbeRequest {
+  readonly pageSize?: number;
+  readonly query: string;
+}
+
+export interface RagProbeResultDto {
+  readonly id: string | null;
+  readonly link: string | null;
+  readonly snippet: string | null;
+  readonly title: string | null;
+}
+
+export interface RagProbeResponse {
+  readonly query: string;
+  readonly results: readonly RagProbeResultDto[];
+  readonly summary: string | null;
+}
+
+export interface ProductRagAgentResponse {
+  readonly answer: string;
+  readonly probe: RagProbeResponse;
+  readonly usedRag: boolean;
+}
+
 export interface GeminiPreviewRequest {
   readonly question: string;
 }

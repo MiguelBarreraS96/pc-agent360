@@ -42,6 +42,16 @@
           <p class="text-[12.5px] text-ink/45 mt-2 font-mono truncate">{{ product.icon }}</p>
 
           <div class="flex items-center gap-2 mt-4">
+            <button
+              class="btn-ghost flex-1 py-2 text-[12.5px] flex items-center justify-center gap-1.5"
+              type="button"
+              (click)="openAgent(product)"
+              [disabled]="product.rag.state !== 'active'"
+              [attr.aria-label]="product.rag.state === 'active' ? 'Probar agente RAG' : 'El motor RAG no está activo'"
+            >
+              <i class="bi bi-stars" aria-hidden="true"></i>
+              Agente
+            </button>
             <button class="btn-ghost flex-1 py-2 text-[12.5px] flex items-center justify-center gap-1.5" type="button" (click)="openDocuments(product)">
               <i class="bi bi-database-gear" aria-hidden="true"></i>
               Documentos
@@ -130,4 +140,8 @@
 
 @if (documentsProduct(); as product) {
   <app-product-documents [product]="product" (closed)="closeDocuments()" (productChanged)="onDocumentsProductChanged($event)" />
+}
+
+@if (agentProduct(); as product) {
+  <app-product-rag-agent [product]="product" (closed)="closeAgent()" />
 }

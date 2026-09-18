@@ -1,0 +1,103 @@
+<div class="modal open">
+  <div class="modal-bg" (click)="close()"></div>
+  <section class="modal-card glass rounded-[28px] w-full max-w-[720px] max-h-[92vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="product-rag-agent-title">
+    <header class="flex items-center gap-3 px-6 py-5 border-b border-ink/10">
+      <div
+        class="w-10 h-10 rounded-[14px] grid place-items-center"
+        style="background:linear-gradient(135deg, rgba(0,169,79,.14), rgba(255,209,0,.14)); border:1px solid rgba(0,169,79,.22)"
+      >
+        <i class="bi bi-stars text-bolivar-600" aria-hidden="true"></i>
+      </div>
+      <div class="min-w-0">
+        <h3 id="product-rag-agent-title" class="font-bold text-ink truncate">Probar agente RAG — {{ product().name }}</h3>
+        <p class="text-[12px] text-ink/40">Discovery Engine recupera evidencia y Gemini responde únicamente con esos fragmentos.</p>
+      </div>
+      <button class="ml-auto btn-ghost w-9 h-9 grid place-items-center shrink-0" type="button" (click)="close()" aria-label="Cerrar">
+        <i class="bi bi-x-lg text-[13px]" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="p-6 space-y-4">
+      @if (product().rag.state !== 'active') {
+        <div class="text-[12.5px] rounded-xl px-3 py-2.5 flex items-center gap-2" [style.background]="'rgba(255,209,0,.12)'" [style.color]="'#8a6d00'">
+          <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+          <span>El motor RAG debe estar activo antes de hacer una consulta.</span>
+        </div>
+      }
+
+      <form class="space-y-3" [formGroup]="form" (ngSubmit)="ask()" novalidate>
+        <div>
+          <label for="rag-agent-query" class="block text-[12px] font-semibold text-ink/55 mb-2">Pregunta</label>
+          <textarea id="rag-agent-query" class="field field-plain" formControlName="query" rows="3" maxlength="1000" placeholder="Ej.: ¿Qué cobertura aplica para este producto?"></textarea>
+          @if (form.controls.query.touched && form.controls.query.invalid) {
+            <p class="text-[12px] text-red-600 mt-1">Ingrese una pregunta de máximo 1.000 caracteres.</p>
+          }
+        </div>
+        <button
+          class="btn-primary px-4 py-2.5 text-[13px] flex items-center justify-center gap-2"
+          type="submit"
+          [disabled]="isAsking() || product().rag.state !== 'active'"
+        >
+          @if (isAsking()) {
+            <span class="inline-block w-3.5 h-3.5 border-2 border-current border-r-transparent rounded-full animate-spin" aria-hidden="true"></span>
+            Consultando…
+          } @else {
+            <i class="bi bi-send" aria-hidden="true"></i>
+            Consultar agente
+          }
+        </button>
+      </form>
+
+      @if (errorMessage(); as message) {
+        <div class="text-[12.5px] text-red-700 bg-red-500/10 border border-red-500/25 rounded-xl px-3 py-2" role="alert">
+          <p>{{ message }}</p>
+          @if (errorSupportId(); as supportId) {
+            <p class="text-[11.5px] text-red-600 mt-1">Código de soporte: {{ supportId }}</p>
+          }
+        </div>
+      }
+
+      @if (result(); as agentResult) {
+        <article class="rounded-[18px] border border-bolivar-500/20 bg-bolivar-500/5 p-4 space-y-2">
+          <div class="flex items-center gap-2">
+            <i class="bi bi-robot text-bolivar-600" aria-hidden="true"></i>
+            <h4 class="font-semibold text-[13px] text-ink">Respuesta del agente</h4>
+            <span class="state-chip ml-auto" [style.background]="agentResult.usedRag ? 'rgba(0,169,79,.10)' : 'rgba(255,209,0,.16)'" [style.color]="agentResult.usedRag ? '#00803b' : '#8a6d00'">
+              {{ agentResult.usedRag ? 'Con evidencia RAG' : 'Sin evidencia' }}
+            </span>
+          </div>
+          <p class="text-[13px] leading-relaxed text-ink/75 whitespace-pre-wrap">{{ agentResult.answer }}</p>
+        </article>
+
+        @if (agentResult.probe.summary; as summary) {
+          <article class="rounded-[18px] border border-ink/10 bg-white/45 p-4">
+            <h4 class="font-semibold text-[13px] text-ink mb-2">Resumen de Discovery Engine</h4>
+            <p class="text-[12.5px] leading-relaxed text-ink/65 whitespace-pre-wrap">{{ summary }}</p>
+          </article>
+        }
+
+        <section class="space-y-2" aria-label="Evidencia RAG recuperada">
+          <div class="flex items-center gap-2">
+            <i class="bi bi-search text-ink/45" aria-hidden="true"></i>
+            <h4 class="font-semibold text-[13px] text-ink">Evidencia recuperada</h4>
+          </div>
+          @for (evidence of agentResult.probe.results; track evidence.id ?? $index) {
+            <article class="glass-soft rounded-[16px] p-3.5">
+              <p class="text-[12.5px] font-semibold text-ink">{{ evidence.title ?? 'Documento sin título' }}</p>
+              @if (evidence.snippet; as snippet) {
+                <p class="text-[12px] leading-relaxed text-ink/65 mt-1.5 whitespace-pre-wrap">{{ snippet }}</p>
+              } @else {
+                <p class="text-[12px] text-ink/40 mt-1.5">No se obtuvo un fragmento utilizable para este resultado.</p>
+              }
+              @if (evidence.link; as link) {
+                <p class="text-[11px] text-ink/35 mt-2 break-all">{{ link }}</p>
+              }
+            </article>
+          } @empty {
+            <div class="text-center py-7 text-ink/40 text-sm">Discovery Engine no devolvió resultados.</div>
+          }
+        </section>
+      }
+    </div>
+  </section>
+</div>

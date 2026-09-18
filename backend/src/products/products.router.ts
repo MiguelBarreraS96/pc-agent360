@@ -5,13 +5,16 @@ import { parseInput, uuidV4Schema } from "../validation";
 
 import { createProductDocumentsRouter } from "./product-documents.router";
 import type { ProductDocumentsService } from "./product-documents.service";
+import type { ProductRagAgentService } from "./product-rag-agent.service";
 import { toProductResponse } from "./products.models";
 import { createProductInputSchema, updateProductInputSchema } from "./products.schemas";
 import type { ProductsService } from "./products.service";
+import { ragProbeInputSchema } from "./rag-probe.schemas";
 
 export interface ProductsRouterDependencies {
   readonly authenticate: RequestHandler;
   readonly productDocumentsService: ProductDocumentsService;
+  readonly productRagAgentService: ProductRagAgentService;
   readonly productsService: ProductsService;
   readonly requireAdmin: RequestHandler;
   readonly requireCsrf: RequestHandler;
@@ -46,6 +49,38 @@ export function createProductsRouter(dependencies: ProductsRouterDependencies): 
         request.correlationId,
       );
       response.status(202).json({ product: toProductResponse(product) });
+    }),
+  );
+
+  router.post(
+    "/:productId/rag/probe",
+    dependencies.authenticate,
+    dependencies.requireAdmin,
+    dependencies.requireProductsRead,
+    dependencies.requireCsrf,
+    asyncHandler(async (request, response): Promise<void> => {
+      const probe = await dependencies.productsService.probeRag(
+        parseInput(uuidV4Schema, request.params.productId),
+        parseInput(ragProbeInputSchema, request.body),
+        request.correlationId,
+      );
+      response.status(200).json(probe);
+    }),
+  );
+
+  router.post(
+    "/:productId/rag/ask",
+    dependencies.authenticate,
+    dependencies.requireAdmin,
+    dependencies.requireProductsRead,
+    dependencies.requireCsrf,
+    asyncHandler(async (request, response): Promise<void> => {
+      const answer = await dependencies.productRagAgentService.ask(
+        parseInput(uuidV4Schema, request.params.productId),
+        parseInput(ragProbeInputSchema, request.body),
+        request.correlationId,
+      );
+      response.status(200).json(answer);
     }),
   );
 
