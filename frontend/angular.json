@@ -81,7 +81,13 @@
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/app/core/runtime-config.loader.ts",
+                  "with": "src/app/core/runtime-config.loader.development.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -93,7 +99,8 @@
               "buildTarget": "frontend:build:production"
             },
             "development": {
-              "buildTarget": "frontend:build:development"
+              "buildTarget": "frontend:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

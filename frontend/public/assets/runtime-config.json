@@ -1,0 +1,11 @@
+{
+  "apiBaseUrl": "http://localhost:4200/api/v1",
+  "emailLinkContinueUrl": "http://localhost:4200/auth/email-link",
+  "firebase": {
+    "apiKey": "AIzaSyCwVzR0-xbxPZ3TIR993U7gPIGunhsKyTI",
+    "appId": "1:375497346421:web:23ccfdc0c49b943122573c",
+    "authDomain": "sb-dominique-ai.firebaseapp.com",
+    "projectId": "sb-dominique-ai"
+  },
+  "inactivityTimeoutSeconds": 900
+}

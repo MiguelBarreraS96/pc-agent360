@@ -1,0 +1,142 @@
+<section class="h-full min-h-[560px] grid place-items-center py-6" aria-label="Agente IA">
+  <div class="relative">
+    <div class="halo" aria-hidden="true"></div>
+
+    <div class="agent-shell glass" [class.expanded]="stage() === 'chat'">
+      <!-- Intro: referencia local -->
+      <div class="agent-pane grid place-items-center p-7" [class.show]="stage() === 'intro'" [class.hide]="stage() !== 'intro'">
+        <div class="w-full max-w-[460px] text-center">
+          <div class="flex justify-center mb-4">
+            <div class="orb float-soft" aria-hidden="true"></div>
+          </div>
+          <h2 class="text-[19px] font-bold text-ink">Asistente Bolívar</h2>
+          <p class="text-[13px] text-ink/45 mt-1.5 mb-5">Ingresa una referencia de prueba para comenzar</p>
+
+          <form class="relative" [formGroup]="citizenIdForm" (ngSubmit)="startConsultation()">
+            <input
+              id="citizen-id"
+              class="field !rounded-full !py-4 !pl-12 !pr-[54px] text-center tracking-wider"
+              inputmode="numeric"
+              autocomplete="off"
+              maxlength="15"
+              formControlName="citizenId"
+              (input)="onCitizenIdInput($event)"
+              placeholder="Identificador de prueba"
+            >
+            <i class="bi bi-person-vcard field-ico !left-5" aria-hidden="true"></i>
+            <button
+              type="submit"
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full grid place-items-center transition hover:scale-105 active:scale-95"
+              style="background:linear-gradient(135deg,#00A94F,#0f9e4d); color:#02150C; box-shadow:0 8px 20px -6px rgba(0,169,79,.9)"
+              aria-label="Comenzar consulta"
+            >
+              <i class="bi bi-arrow-right text-[15px]" aria-hidden="true"></i>
+            </button>
+          </form>
+
+          @if (citizenIdForm.controls.citizenId.touched && citizenIdForm.controls.citizenId.invalid) {
+            <p class="text-[12px] text-red-600 mt-3">Ingresa un identificador válido de prueba (mín. 6 dígitos).</p>
+          }
+          <p class="text-[11.5px] text-ink/30 mt-3.5">Prueba local · la referencia no se envía a Gemini</p>
+        </div>
+      </div>
+
+      <!-- Chat -->
+      <div class="agent-pane flex flex-col" [class.show]="stage() === 'chat'" [class.hide]="stage() !== 'chat'">
+        <div class="flex items-center gap-3 px-4 sm:px-5 py-3.5 border-b border-ink/10 shrink-0">
+          <div
+            class="w-9 h-9 rounded-full grid place-items-center shrink-0"
+            style="background:linear-gradient(135deg,#00A94F,#FFD100); box-shadow:0 8px 18px -8px rgba(0,169,79,.9)"
+          >
+            <i class="bi bi-stars text-[15px]" style="color:#02150C" aria-hidden="true"></i>
+          </div>
+          <div class="leading-tight min-w-0">
+            <p class="text-[14px] font-bold flex items-center gap-2 text-ink">
+              Asistente Bolívar
+              <span class="w-1.5 h-1.5 rounded-full bg-bolivar-500 animate-pulse"></span>
+            </p>
+            <p class="text-[11.5px] text-ink/40 truncate">
+              Prueba local · referencia <span class="text-ink/70">{{ citizenId() ? formatCitizenId(citizenId()!) : '—' }}</span>
+            </p>
+          </div>
+          <button
+            class="ml-auto btn-ghost px-3 py-2 text-[12px] flex items-center gap-1.5 shrink-0"
+            type="button"
+            [disabled]="isTyping()"
+            (click)="resetConsultation()"
+          >
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i><span class="hidden sm:inline">Nueva consulta</span>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-4 sm:px-5 py-5 space-y-3.5" #chatBody [attr.aria-busy]="isTyping()">
+          @for (message of messages(); track message.id) {
+            @if (message.role === 'me') {
+              <div class="msg flex justify-end">
+                <div class="bubble-me max-w-[78%] px-4 py-2.5 text-[13.5px]">{{ message.text }}</div>
+              </div>
+            } @else {
+              <div class="msg flex justify-start">
+                <div class="flex gap-2.5 max-w-[86%]">
+                  <div class="w-7 h-7 rounded-full shrink-0 mt-0.5 grid place-items-center" style="background:linear-gradient(135deg,#00A94F,#FFD100)">
+                    <i class="bi bi-stars text-[12px]" style="color:#02150C" aria-hidden="true"></i>
+                  </div>
+                  <div class="bubble-bot px-4 py-3 text-[13.5px] leading-relaxed">{{ message.text }}</div>
+                </div>
+              </div>
+            }
+          }
+          @if (isTyping()) {
+            <div class="msg flex justify-start">
+              <div class="flex gap-2.5">
+                <div class="w-7 h-7 rounded-full shrink-0 mt-0.5 grid place-items-center" style="background:linear-gradient(135deg,#00A94F,#FFD100)">
+                  <i class="bi bi-stars text-[12px]" style="color:#02150C" aria-hidden="true"></i>
+                </div>
+                <div class="bubble-bot px-4 py-3.5 flex items-center gap-1.5">
+                  <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="px-4 sm:px-5 pb-4 pt-2 shrink-0">
+          <div class="flex gap-2 overflow-x-auto pb-2.5 -mx-1 px-1">
+            @for (prompt of suggestedPrompts; track prompt) {
+              <button
+                type="button"
+                class="glass-soft whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] text-ink/70 hover:text-ink hover:bg-ink/[.06] transition"
+                [disabled]="isTyping()"
+                (click)="sendPrompt(prompt)"
+              >
+                {{ prompt }}
+              </button>
+            }
+          </div>
+          <form class="relative" [formGroup]="messageForm" (ngSubmit)="sendMessage()">
+            <input
+              class="field !rounded-2xl !pl-4 !pr-[52px] !py-3.5 !text-[14px]"
+              formControlName="text"
+              autocomplete="off"
+              maxlength="1000"
+              [disabled]="isTyping()"
+              placeholder="Escribe una pregunta para Gemini..."
+            >
+            <button
+              type="submit"
+              class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl grid place-items-center transition hover:scale-105 active:scale-95"
+              style="background:linear-gradient(135deg,#00A94F,#0f9e4d); color:#02150C"
+              [disabled]="isTyping()"
+              aria-label="Enviar"
+            >
+              <i class="bi bi-send-fill text-[13px]" aria-hidden="true"></i>
+            </button>
+          </form>
+          @if (messageForm.controls.text.touched && messageForm.controls.text.invalid) {
+            <p class="text-[11.5px] text-red-600 mt-2">Escribe una pregunta de máximo 1.000 caracteres.</p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

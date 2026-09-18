@@ -2,23 +2,31 @@
   "name": "pc-agent360-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "API mínima de salud para pc-agent360.",
+  "description": "API de autenticación Firebase, sesiones y control de acceso para pc-agent360.",
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch --env-file=.env src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "deploy": "gcloud run deploy bk-agent360 --source . --project=sb-dominique-ai --region=us-central1 --port=8080 --allow-unauthenticated --ingress=all --cpu=1 --memory=512Mi --timeout=15s --concurrency=80 --min-instances=0 --max-instances=2 --set-env-vars=NODE_ENV=production,HOST=0.0.0.0,GOOGLE_CLOUD_PROJECT=sb-dominique-ai,FIRESTORE_DATABASE_ID=pc-agent-360 --quiet"
+    "deploy": "node scripts/deploy.mjs",
+    "seed": "node --env-file=.env scripts/seed-firestore.mjs"
   },
   "dependencies": {
+    "@google-cloud/discoveryengine": "3.2.0",
+    "@google-cloud/storage": "8.2.0",
+    "@google/genai": "2.23.0",
+    "busboy": "1.6.0",
     "cors": "2.8.5",
     "express": "4.21.2",
-    "helmet": "8.0.0"
+    "firebase-admin": "13.0.2",
+    "helmet": "8.0.0",
+    "zod": "3.24.2"
   },
   "devDependencies": {
+    "@types/busboy": "1.5.4",
     "@types/cors": "2.8.17",
     "@types/express": "4.17.21",
     "@types/node": "20.17.24",

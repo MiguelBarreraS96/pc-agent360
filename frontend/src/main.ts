@@ -1,9 +1,16 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 
-import { appConfig } from './app/app.config';
 import { App } from './app/app';
+import { createAppConfig } from './app/app.config';
+import { loadRuntimeConfig } from './app/core/runtime-config.loader';
 
-/** Show a generic startup failure without exposing internal error details. */
+/** Load public configuration before constructing providers that depend on it. */
+async function bootstrap(): Promise<void> {
+  const runtimeConfig = await loadRuntimeConfig();
+  await bootstrapApplication(App, createAppConfig(runtimeConfig));
+}
+
+/** Show a generic startup failure without exposing configuration or provider details. */
 function showStartupFailure(): void {
   const appRoot = document.querySelector<HTMLElement>('app-root');
 
@@ -12,4 +19,4 @@ function showStartupFailure(): void {
   }
 }
 
-void bootstrapApplication(App, appConfig).catch(showStartupFailure);
+void bootstrap().catch(showStartupFailure);

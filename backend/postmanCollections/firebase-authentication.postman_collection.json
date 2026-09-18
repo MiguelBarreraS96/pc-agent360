@@ -1,0 +1,254 @@
+{
+  "info": {
+    "_postman_id": "c7d66e4e-2d70-4fd9-a8bb-9f404f02a3d2",
+    "name": "pc-agent360 Firebase authentication",
+    "description": "Pruebas manuales de autenticación, CSRF y autorización. Use solamente tokens Firebase de corta vida obtenidos en un entorno autorizado; no guarde tokens ni correos reales en la colección.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3000"
+    },
+    {
+      "key": "origin",
+      "value": "http://127.0.0.1:4200"
+    },
+    {
+      "key": "firebaseIdToken",
+      "value": ""
+    },
+    {
+      "key": "csrfToken",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": "00000000-0000-4000-8000-000000000000"
+    },
+    {
+      "key": "roleId",
+      "value": "00000000-0000-4000-8000-000000000000"
+    }
+  ],
+  "item": [
+    {
+      "name": "Availability",
+      "item": [
+        {
+          "name": "GET /api/v1/health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/health"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "POST /api/v1/auth/session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('csrfToken', pm.response.json().csrfToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseIdToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/session"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/auth/session/bootstrap",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('csrfToken', pm.response.json().csrfToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{origin}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/session/bootstrap"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/v1/auth/me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/auth/activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/activity"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/auth/session/refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('csrfToken', pm.response.json().csrfToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{firebaseIdToken}}",
+                "type": "text"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/session/refresh"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/logout"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Administration authorization checks",
+      "item": [
+        {
+          "name": "GET /api/v1/admin/users (ADMIN + users:read)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/users"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/admin/users (ADMIN + users:write)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"new.user@example.com\",\n  \"displayName\": \"New User\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/users"
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/v1/admin/roles (ADMIN + roles:read)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/roles"
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/admin/roles (ADMIN + roles:write)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"AUDITOR\",\n  \"name\": \"Auditor\",\n  \"permissions\": [\"agent:read\"]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/roles"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

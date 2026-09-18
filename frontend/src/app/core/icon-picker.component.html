@@ -1,0 +1,76 @@
+<button
+  type="button"
+  class="flex items-center gap-3 w-full text-left field field-plain !py-2"
+  (click)="open()"
+  [disabled]="disabled()"
+>
+  <span class="w-9 h-9 rounded-[12px] grid place-items-center text-[17px] shrink-0 bg-white/70 border border-ink/10 text-bolivar-600">
+    @if (value().length > 0) {
+      <i [class]="value()" aria-hidden="true"></i>
+    } @else {
+      <i class="bi bi-grid-3x3-gap text-ink/30" aria-hidden="true"></i>
+    }
+  </span>
+  <span class="flex-1 min-w-0">
+    @if (iconName().length > 0) {
+      <span class="block text-[13px] font-mono text-ink truncate">{{ iconName() }}</span>
+    } @else {
+      <span class="block text-[13px] text-ink/40">Elegir icono…</span>
+    }
+  </span>
+  <i class="bi bi-chevron-down text-ink/30 text-[12px] shrink-0" aria-hidden="true"></i>
+</button>
+
+<div class="modal" [class.open]="isOpen()">
+  <div class="modal-bg" (click)="close()"></div>
+  <div class="modal-card glass rounded-[28px] w-full max-w-[560px] max-h-[86vh] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="icon-picker-title">
+    <div class="flex items-center gap-3 px-6 py-5 border-b border-ink/10 shrink-0">
+      <div>
+        <h3 id="icon-picker-title" class="font-bold text-ink">Elegir icono</h3>
+        <p class="text-[12px] text-ink/40">Bootstrap Icons — haga clic en un icono para seleccionarlo</p>
+      </div>
+      <button class="ml-auto btn-ghost w-9 h-9 grid place-items-center shrink-0" type="button" (click)="close()" aria-label="Cerrar">
+        <i class="bi bi-x-lg text-[13px]" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="px-6 pt-4 shrink-0">
+      <div class="relative">
+        <i class="bi bi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/30 text-[13px]" aria-hidden="true"></i>
+        <input
+          type="text"
+          class="field field-plain pl-9"
+          placeholder="Buscar icono, ej. carro, casa, salud…"
+          [ngModel]="searchTerm()"
+          (ngModelChange)="searchTerm.set($event)"
+          autocomplete="off"
+        >
+      </div>
+      @if (searchTerm().trim().length === 0) {
+        <p class="text-[11.5px] text-ink/35 mt-2">Mostrando iconos sugeridos. Escriba para buscar entre todos los disponibles.</p>
+      } @else if (isTruncated()) {
+        <p class="text-[11.5px] text-ink/35 mt-2">Mostrando los primeros {{ visibleResults().length }} resultados. Afine la búsqueda para ver más.</p>
+      }
+    </div>
+
+    <div class="px-6 py-4 overflow-y-auto flex-1">
+      <div class="grid grid-cols-5 sm:grid-cols-6 gap-2">
+        @for (name of visibleResults(); track name) {
+          <button
+            type="button"
+            class="aspect-square rounded-[14px] grid place-items-center text-[19px] border transition"
+            [class]="iconName() === name ? 'bg-bolivar-500/15 border-bolivar-500 text-bolivar-600' : 'bg-white/50 border-ink/10 text-ink/60 hover:bg-bolivar-500/10 hover:text-bolivar-600'"
+            (click)="select(name)"
+            [attr.aria-label]="name"
+            [attr.aria-pressed]="iconName() === name"
+            [title]="name"
+          >
+            <i [class]="'bi bi-' + name" aria-hidden="true"></i>
+          </button>
+        } @empty {
+          <div class="col-span-full text-center py-10 text-ink/40 text-sm">No se encontraron iconos para esa búsqueda.</div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

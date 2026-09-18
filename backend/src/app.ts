@@ -2,9 +2,16 @@ import cors, { type CorsOptions } from "cors";
 import express, { type Express, type RequestHandler } from "express";
 import helmet from "helmet";
 
-import { appConfig } from "./config";
+import { createRolesRouter } from "./access/roles.router";
+import { createUsersRouter } from "./access/users.router";
+import { createAuthRouter } from "./auth/auth.router";
+import { createChatRouter } from "./chat/chat.router";
+import { createGeminiPreviewRouter } from "./chat/gemini-preview.router";
+import type { ApplicationDependencies } from "./composition";
+import { forbidden } from "./errors";
 import { correlationIdMiddleware } from "./middleware/correlation-id";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
+import { createProductsRouter } from "./products/products.router";
 
 interface HealthResponse {
   readonly correlationId: string;
@@ -12,17 +19,22 @@ interface HealthResponse {
   readonly status: "UP";
 }
 
-/** Build restrictive CORS settings from the explicit environment allowlist. */
+/** Build credentialed CORS settings from the exact configured browser-origin allowlist. */
 function createCorsOptions(allowedOrigins: ReadonlySet<string>): CorsOptions {
   return {
-    allowedHeaders: ["Content-Type", "X-Correlation-ID"],
-    exposedHeaders: ["X-Correlation-ID"],
+    allowedHeaders: ["Authorization", "Content-Type", "X-Correlation-ID", "X-CSRF-Token"],
+    credentials: true,
+    exposedHeaders: ["Retry-After", "X-Correlation-ID"],
     maxAge: 600,
-    methods: ["GET"],
+    methods: ["DELETE", "GET", "OPTIONS", "PATCH", "POST"],
     optionsSuccessStatus: 204,
     origin(origin, callback): void {
-      const isAllowed = origin === undefined || allowedOrigins.has(origin);
-      callback(null, isAllowed);
+      if (origin === undefined || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(forbidden());
     },
   };
 }
@@ -36,15 +48,86 @@ const healthHandler: RequestHandler = (request, response): void => {
   } satisfies HealthResponse);
 };
 
-/** Create the HTTP application with security, tracing, routing, and error handling. */
-export function createApp(): Express {
+/** Create the HTTP application with security, tracing, authentication, and centralized errors. */
+export function createApp(dependencies: ApplicationDependencies): Express {
   const app = express();
 
   app.disable("x-powered-by");
+  if (dependencies.config.isProduction) {
+    app.set("trust proxy", 1);
+  }
+
   app.use(correlationIdMiddleware);
   app.use(helmet());
-  app.use(cors(createCorsOptions(appConfig.corsAllowedOrigins)));
-  app.use(express.json({ limit: appConfig.jsonBodyLimit, strict: true }));
+  app.use(cors(createCorsOptions(dependencies.config.corsAllowedOrigins)));
+  app.use(express.json({ limit: dependencies.config.jsonBodyLimit, strict: true }));
+
+  app.use(
+    "/api/v1/auth",
+    createAuthRouter({
+      authenticate: dependencies.authenticate,
+      authService: dependencies.authService,
+      corsAllowedOrigins: dependencies.config.corsAllowedOrigins,
+      rateLimitAuthentication: dependencies.rateLimitAuthentication,
+      rateLimitSession: dependencies.rateLimitSession,
+      requireCsrf: dependencies.requireCsrf,
+      sessionConfig: dependencies.config.session,
+    }),
+  );
+  app.use(
+    "/api/v1/admin/users",
+    createUsersRouter({
+      authenticate: dependencies.authenticate,
+      requireAdmin: dependencies.requireAdmin,
+      requireCsrf: dependencies.requireCsrf,
+      requireUsersRead: dependencies.requireUsersRead,
+      requireUsersWrite: dependencies.requireUsersWrite,
+      userService: dependencies.userService,
+    }),
+  );
+  app.use(
+    "/api/v1/admin/roles",
+    createRolesRouter({
+      authenticate: dependencies.authenticate,
+      requireAdmin: dependencies.requireAdmin,
+      requireCsrf: dependencies.requireCsrf,
+      requireRolesRead: dependencies.requireRolesRead,
+      requireRolesWrite: dependencies.requireRolesWrite,
+      roleService: dependencies.roleService,
+    }),
+  );
+  app.use(
+    "/api/v1/admin/products",
+    createProductsRouter({
+      authenticate: dependencies.authenticate,
+      productDocumentsService: dependencies.productDocumentsService,
+      productsService: dependencies.productsService,
+      requireAdmin: dependencies.requireAdmin,
+      requireCsrf: dependencies.requireCsrf,
+      requireProductsRead: dependencies.requireProductsRead,
+      requireProductsWrite: dependencies.requireProductsWrite,
+    }),
+  );
+  app.use(
+    "/api/v1/products",
+    createChatRouter({
+      authenticate: dependencies.authenticate,
+      chatService: dependencies.chatService,
+      requireAgentRead: dependencies.requireAgentRead,
+      requireCsrf: dependencies.requireCsrf,
+    }),
+  );
+  if (!dependencies.config.isProduction) {
+    app.use(
+      "/api/v1/development/gemini",
+      createGeminiPreviewRouter({
+        authenticate: dependencies.authenticate,
+        chatService: dependencies.chatService,
+        requireAgentRead: dependencies.requireAgentRead,
+        requireCsrf: dependencies.requireCsrf,
+      }),
+    );
+  }
   app.get("/api/v1/health", healthHandler);
   app.use(notFoundHandler);
   app.use(errorHandler);

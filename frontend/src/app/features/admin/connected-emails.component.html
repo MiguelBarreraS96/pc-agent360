@@ -1,0 +1,19 @@
+<section class="grid gap-5" aria-label="Correos conectados">
+  @if (isLoading()) {
+    <div class="glass rounded-[24px] p-10 flex items-center justify-center gap-3 text-ink/45 text-[13px]" role="status">
+      <span class="inline-block w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin" aria-hidden="true"></span>
+      Cargando configuración de accesos
+    </div>
+  } @else if (errorMessage(); as message) {
+    <div class="text-[13px] text-red-700 bg-red-500/10 border border-red-500/25 rounded-2xl px-4 py-3" role="alert">
+      <p>{{ message }}</p>
+      @if (errorSupportId(); as supportId) {
+        <p class="text-[12px] text-red-600 mt-1">Código de soporte: {{ supportId }}</p>
+      }
+      <button class="btn-ghost px-4 py-2 text-[13px] mt-3" type="button" (click)="onDataChanged()">Reintentar</button>
+    </div>
+  } @else {
+    <app-whitelist-users [users]="users()" [roles]="roles()" (changed)="onDataChanged()" />
+    <app-role-management [roles]="roles()" (changed)="onDataChanged()" />
+  }
+</section>

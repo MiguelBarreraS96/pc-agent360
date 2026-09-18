@@ -1,6 +1,13 @@
 # Dependencies
 /node_modules/
 
+# Local configuration and institutional registry settings
+.env
+.env.*
+!.env.example
+.npmrc
+/public/assets/runtime-config.local.json
+
 # Angular build and cache artifacts
 /.angular/
 /dist/

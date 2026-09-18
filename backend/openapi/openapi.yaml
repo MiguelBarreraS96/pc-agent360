@@ -2,15 +2,18 @@ openapi: 3.0.3
 info:
   title: pc-agent360 Backend API
   version: 1.0.0
-  description: Contrato de la API mínima de disponibilidad del backend.
+  description: >-
+    API para autenticación Firebase, sesiones opacas y administración de acceso.
+    Los errores son genéricos y nunca contienen tokens, cookies, correos ni trazas.
 servers:
   - url: http://127.0.0.1:3000
-    description: Ejecución local
+    description: Desarrollo local
+  - url: https://api.example.com
+    description: Referencia de despliegue HTTPS
 paths:
   /api/v1/health:
     get:
-      tags:
-        - Availability
+      tags: [Availability]
       summary: Consulta el estado de disponibilidad del backend
       operationId: getHealth
       parameters:
@@ -25,75 +28,1329 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
         '500':
-          description: Ocurrió un error interno sin detalles expuestos.
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/session:
+    post:
+      tags: [Authentication]
+      summary: Crea una sesión de aplicación a partir de un Firebase ID token
+      description: >-
+        Excepción de CSRF: aún no existe una sesión. Requiere un Firebase ID token
+        validado y un usuario activo en la whitelist.
+      operationId: createSession
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      security:
+        - FirebaseIdToken: []
+      responses:
+        '201':
+          description: Sesión creada. La cookie contiene un secreto opaco que no aparece en JSON.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SessionCookie'
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/session/bootstrap:
+    post:
+      tags: [Authentication]
+      summary: Rota el CSRF de una sesión de cookie sin registrar actividad
+      description: >-
+        Requiere una cookie de sesión y un Origin presente que coincida exactamente con
+        CORS_ALLOWED_ORIGINS. Rota el hash CSRF persistido, no amplía la expiración absoluta
+        ni la actividad y la respuesta no debe almacenarse en caché.
+      operationId: bootstrapSession
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Origin'
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Sesión válida con un CSRF nuevo para mantener solo en memoria.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/me:
+    get:
+      tags: [Authentication]
+      summary: Consulta el usuario, rol y permisos efectivos de la sesión
+      description: Valida la sesión sin registrar actividad ni rotar el CSRF.
+      operationId: getCurrentUser
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Identidad y permisos resueltos por el backend.
           headers:
             X-Correlation-ID:
               $ref: '#/components/headers/CorrelationId'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/UserEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/activity:
+    post:
+      tags: [Authentication]
+      summary: Registra actividad explícita de una sesión
+      description: Solo actualiza actividad después de validar el token CSRF actual.
+      operationId: recordSessionActivity
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      security:
+        - SessionCookie: []
+      responses:
+        '204':
+          description: Actividad registrada sin cambiar la expiración absoluta.
+          headers:
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/session/refresh:
+    post:
+      tags: [Authentication]
+      summary: Renueva una sesión tras verificar de nuevo Firebase
+      operationId: refreshSession
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      security:
+        - FirebaseIdToken: []
+          SessionCookie: []
+      responses:
+        '200':
+          description: Sesión reemplazada por una nueva con máximo una hora de vida.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SessionCookie'
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Revoca la sesión actual y elimina la cookie
+      operationId: logout
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      security:
+        - SessionCookie: []
+      responses:
+        '204':
+          description: Sesión revocada.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SessionCookie'
+            X-Correlation-ID:
+              $ref: '#/components/headers/CorrelationId'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/admin/users:
+    get:
+      tags: [Users]
+      summary: Lista la whitelist de usuarios autorizados
+      description: Requiere el rol ADMIN y el permiso users:read actual.
+      operationId: listUsers
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Usuarios autorizados.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Users]
+      summary: Agrega un usuario a la whitelist
+      description: Requiere el rol ADMIN, users:write y un CSRF válido.
+      operationId: createUser
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: Usuario autorizado creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/admin/users/{userId}:
+    get:
+      tags: [Users]
+      summary: Consulta un usuario de la whitelist
+      description: Requiere el rol ADMIN y el permiso users:read actual.
+      operationId: getUser
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/UserId'
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Usuario autorizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Users]
+      summary: Actualiza usuario, rol o estado de la whitelist
+      description: Requiere el rol ADMIN, users:write y un CSRF válido.
+      operationId: updateUser
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/UserId'
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Usuario actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Users]
+      summary: Elimina un usuario de la whitelist
+      description: Requiere el rol ADMIN, users:write y un CSRF válido.
+      operationId: deleteUser
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/UserId'
+      security:
+        - SessionCookie: []
+      responses:
+        '204':
+          description: Usuario eliminado y sus sesiones invalidadas.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/admin/roles:
+    get:
+      tags: [Roles]
+      summary: Lista roles y permisos permitidos
+      description: Requiere el rol ADMIN y el permiso roles:read actual.
+      operationId: listRoles
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Roles disponibles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolesEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Roles]
+      summary: Crea un rol personalizado
+      description: Requiere el rol ADMIN, roles:write y un CSRF válido.
+      operationId: createRole
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+      responses:
+        '201':
+          description: Rol creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/admin/roles/{roleId}:
+    get:
+      tags: [Roles]
+      summary: Consulta un rol
+      description: Requiere el rol ADMIN y el permiso roles:read actual.
+      operationId: getRole
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RoleId'
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Rol encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Roles]
+      summary: Actualiza un rol personalizado o los permisos del rol ADMIN
+      description: Requiere el rol ADMIN, roles:write y un CSRF válido. En el rol protegido ADMIN solo se puede actualizar la lista de permisos.
+      operationId: updateRole
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/RoleId'
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+      responses:
+        '200':
+          description: Rol actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Roles]
+      summary: Elimina un rol personalizado no asignado
+      description: Requiere el rol ADMIN, roles:write y un CSRF válido.
+      operationId: deleteRole
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/RoleId'
+      security:
+        - SessionCookie: []
+      responses:
+        '204':
+          description: Rol eliminado.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/admin/products:
+    get:
+      tags: [Products]
+      summary: Lista productos
+      description: Requiere el rol ADMIN y el permiso products:read actual. No reconcilia el estado RAG de cada producto.
+      operationId: listProducts
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Productos disponibles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductsEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Products]
+      summary: Crea un producto y empieza a aprovisionar su motor RAG
+      description: >-
+        Requiere el rol ADMIN, products:write y un CSRF válido. Persiste el proyecto, ubicación e
+        IDs deterministas del DataStore y Engine; inicia el DataStore sin esperar su operación.
+        Consulte GET /admin/products/{productId} para comprobar el DataStore, crear el Engine y
+        confirmar el estado activo.
+      operationId: createProduct
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '202':
+          description: Producto creado; el motor RAG queda en aprovisionamiento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/admin/products/{productId}:
+    get:
+      tags: [Products]
+      summary: Consulta un producto
+      description: >-
+        Requiere el rol ADMIN y el permiso products:read actual. Reconcilia el estado del
+        motor RAG contra Discovery Engine antes de responder.
+      operationId: getProduct
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ProductId'
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Producto encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Products]
+      summary: Actualiza el nombre o el icono de un producto
+      description: Requiere el rol ADMIN, products:write y un CSRF válido. Nunca modifica el motor RAG.
+      operationId: updateProduct
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProductId'
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Producto actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Products]
+      summary: Elimina un producto y su motor RAG en cascada
+      description: >-
+        Requiere el rol ADMIN, products:write y un CSRF válido. Elimina el Engine, el DataStore,
+        los objetos de Cloud Storage y los metadatos documentales del producto.
+      operationId: deleteProduct
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProductId'
+      security:
+        - SessionCookie: []
+      responses:
+        '204':
+          description: Producto y motor RAG eliminados.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/admin/products/{productId}/documents:
+    get:
+      tags: [Products]
+      summary: Lista los documentos fuente de un producto
+      description: >-
+        Requiere el rol ADMIN y el permiso products:read actual. Reconcilia contra Discovery
+        Engine los documentos que sigan en estado indexing.
+      operationId: listProductDocuments
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ProductId'
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Documentos del producto.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDocumentsEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Products]
+      summary: Carga un documento fuente al motor RAG del producto
+      description: >-
+        Requiere el rol ADMIN, products:write y un CSRF válido. El producto debe tener su
+        motor RAG activo. Acepta PDF, TXT, DOC y DOCX hasta 50 MiB.
+      operationId: uploadProductDocument
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProductId'
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '202':
+          description: Documento almacenado; la importación incremental queda en curso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDocumentEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/admin/products/{productId}/documents/{documentId}:
+    delete:
+      tags: [Products]
+      summary: Elimina un documento fuente del motor RAG del producto
+      description: >-
+        Requiere el rol ADMIN, products:write y un CSRF válido. Elimina primero la
+        representación indexada, luego el objeto de Cloud Storage y por último el metadato.
+      operationId: deleteProductDocument
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProductId'
+        - $ref: '#/components/parameters/DocumentId'
+      security:
+        - SessionCookie: []
+      responses:
+        '204':
+          description: Documento eliminado.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/products/{productId}/chat:
+    post:
+      tags: [Agent]
+      summary: Responde una pregunta sobre un producto usando su base documental (RAG)
+      description: >-
+        Requiere sesión autenticada, el permiso agent:read y un CSRF válido (cualquier usuario
+        autenticado, no solo ADMIN). Busca evidencia en el motor RAG del producto solo si su
+        estado es active; solo invoca a Gemini cuando queda evidencia suficiente tras filtrar,
+        deduplicar y acotar los resultados. Si no hay evidencia o falla la búsqueda o la
+        generación, responde 200 con usedRag=false y un mensaje fijo en vez de fallar.
+      operationId: chatWithProduct
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProductId'
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: Respuesta generada, con o sin evidencia documental disponible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
+  securitySchemes:
+    FirebaseIdToken:
+      type: http
+      scheme: bearer
+      bearerFormat: Firebase ID token
+      description: Token Firebase en memoria, usado solo para crear o renovar sesión.
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: agent360_session
+      description: Nombre por defecto; puede cambiar con SESSION_COOKIE_NAME.
   parameters:
     CorrelationId:
       name: X-Correlation-ID
       in: header
       required: false
-      description: UUID v4 para correlacionar la solicitud. Si no es válido, el servicio genera uno nuevo.
+      description: UUID v4 para correlacionar la solicitud. Se genera uno si falta o es inválido.
       schema:
         $ref: '#/components/schemas/CorrelationId'
+    CsrfToken:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      description: Token CSRF entregado por la creación, bootstrap o renovación de sesión.
+      schema:
+        type: string
+        minLength: 43
+        maxLength: 43
+    Origin:
+      name: Origin
+      in: header
+      required: true
+      description: Origen de navegador que debe coincidir exactamente con CORS_ALLOWED_ORIGINS.
+      schema:
+        type: string
+        format: uri
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UuidV4'
+    RoleId:
+      name: roleId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UuidV4'
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UuidV4'
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UuidV4'
   headers:
+    CacheControlNoStore:
+      description: Impide almacenar la respuesta que contiene un CSRF nuevo.
+      schema:
+        type: string
+        enum: [no-store]
     CorrelationId:
       description: UUID v4 asociado a la solicitud.
       schema:
         $ref: '#/components/schemas/CorrelationId'
+    SessionCookie:
+      description: Cookie HttpOnly de sesión opaca con Secure en producción y SameSite configurable.
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Solicitud con formato, tipo o campo no permitido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthenticated:
+      description: Falta, expiró o no es válida la identidad o sesión.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: La sesión no tiene el rol ADMIN, el permiso o el origen requerido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Recurso no encontrado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: El estado actual no permite procesar la solicitud.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimited:
+      description: Se superó el límite temporal de solicitudes.
+      headers:
+        Retry-After:
+          description: Segundos mínimos antes de reintentar.
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Error interno sin detalles expuestos.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   schemas:
     CorrelationId:
       type: string
       format: uuid
       pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
-      example: f7f37666-1f56-4d06-a26e-4748d7b4da3e
+    UuidV4:
+      type: string
+      format: uuid
+      pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
     HealthResponse:
       type: object
       additionalProperties: false
-      required:
-        - correlationId
-        - service
-        - status
+      required: [correlationId, service, status]
       properties:
         correlationId:
           $ref: '#/components/schemas/CorrelationId'
         service:
           type: string
-          enum:
-            - pc-agent360-backend
+          enum: [pc-agent360-backend]
         status:
           type: string
-          enum:
-            - UP
+          enum: [UP]
+    Permission:
+      type: string
+      enum:
+        - agent:read
+        - emails:manage
+        - products:read
+        - products:write
+        - users:read
+        - users:write
+        - roles:read
+        - roles:write
+    Role:
+      type: object
+      additionalProperties: false
+      required: [id, key, name, description, isProtected, permissions]
+      properties:
+        id:
+          $ref: '#/components/schemas/UuidV4'
+        key:
+          type: string
+          pattern: '^[A-Z][A-Z0-9_]{1,48}$'
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+          nullable: true
+          maxLength: 500
+        isProtected:
+          type: boolean
+        permissions:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Permission'
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, email, displayName, isActive, role]
+      properties:
+        id:
+          $ref: '#/components/schemas/UuidV4'
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        displayName:
+          type: string
+          nullable: true
+          maxLength: 160
+        isActive:
+          type: boolean
+        role:
+          $ref: '#/components/schemas/Role'
+    SessionResponse:
+      type: object
+      additionalProperties: false
+      required: [user, csrfToken, expiresAt]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        csrfToken:
+          type: string
+          minLength: 43
+          maxLength: 43
+        expiresAt:
+          type: string
+          format: date-time
+    UserEnvelope:
+      type: object
+      additionalProperties: false
+      required: [user]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+    UsersEnvelope:
+      type: object
+      additionalProperties: false
+      required: [users]
+      properties:
+        users:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/User'
+    RoleEnvelope:
+      type: object
+      additionalProperties: false
+      required: [role]
+      properties:
+        role:
+          $ref: '#/components/schemas/Role'
+    RolesEnvelope:
+      type: object
+      additionalProperties: false
+      required: [roles]
+      properties:
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+    CreateUserRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        displayName:
+          type: string
+          nullable: true
+          maxLength: 160
+        roleId:
+          $ref: '#/components/schemas/UuidV4'
+    UpdateUserRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        displayName:
+          type: string
+          nullable: true
+          maxLength: 160
+        roleId:
+          $ref: '#/components/schemas/UuidV4'
+        isActive:
+          type: boolean
+    CreateRoleRequest:
+      type: object
+      additionalProperties: false
+      required: [key, name, permissions]
+      properties:
+        key:
+          type: string
+          pattern: '^[A-Z][A-Z0-9_]{1,48}$'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          nullable: true
+          maxLength: 500
+        permissions:
+          type: array
+          minItems: 1
+          maxItems: 8
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Permission'
+    UpdateRoleRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          nullable: true
+          maxLength: 500
+        permissions:
+          type: array
+          minItems: 1
+          maxItems: 8
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Permission'
     ErrorResponse:
       type: object
       additionalProperties: false
-      required:
-        - correlationId
-        - error
+      required: [correlationId, error]
       properties:
         correlationId:
           $ref: '#/components/schemas/CorrelationId'
         error:
           type: object
           additionalProperties: false
-          required:
-            - code
-            - message
+          required: [code, message]
           properties:
             code:
               type: string
               enum:
+                - BAD_REQUEST
+                - CONFLICT
+                - FORBIDDEN
                 - INTERNAL_ERROR
                 - NOT_FOUND
-                - REQUEST_REJECTED
+                - RATE_LIMITED
+                - UNAUTHENTICATED
             message:
               type: string
-              description: Mensaje genérico que no contiene trazas ni información sensible.
+              description: Mensaje genérico sin detalles internos.
+    ProductRagState:
+      type: string
+      enum: [none, creating, active, error]
+    ProductRagErrorReason:
+      type: string
+      nullable: true
+      enum: [DATASTORE_CREATE_FAILED, ENGINE_CREATE_FAILED, UNKNOWN]
+    ProductRag:
+      type: object
+      additionalProperties: false
+      required: [state, errorReason]
+      properties:
+        state:
+          $ref: '#/components/schemas/ProductRagState'
+        errorReason:
+          $ref: '#/components/schemas/ProductRagErrorReason'
+    Product:
+      type: object
+      additionalProperties: false
+      required: [id, name, icon, rag, createdAt, updatedAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/UuidV4'
+        name:
+          type: string
+          maxLength: 120
+        icon:
+          type: string
+          maxLength: 80
+        rag:
+          $ref: '#/components/schemas/ProductRag'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ProductEnvelope:
+      type: object
+      additionalProperties: false
+      required: [product]
+      properties:
+        product:
+          $ref: '#/components/schemas/Product'
+    ProductsEnvelope:
+      type: object
+      additionalProperties: false
+      required: [products]
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+    CreateProductRequest:
+      type: object
+      additionalProperties: false
+      required: [name, icon]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        icon:
+          type: string
+          minLength: 1
+          maxLength: 80
+    UpdateProductRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        icon:
+          type: string
+          minLength: 1
+          maxLength: 80
+    ProductDocumentStatus:
+      type: string
+      enum: [indexing, indexed, error]
+    ProductDocumentErrorReason:
+      type: string
+      nullable: true
+      enum: [IMPORT_FAILED, DELETE_FAILED, UNKNOWN]
+    ProductDocument:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - productId
+        - fileName
+        - contentType
+        - sizeBytes
+        - status
+        - engineDocumentId
+        - errorReason
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/UuidV4'
+        productId:
+          $ref: '#/components/schemas/UuidV4'
+        fileName:
+          type: string
+          maxLength: 150
+        contentType:
+          type: string
+          enum:
+            - application/pdf
+            - text/plain
+            - application/msword
+            - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+        sizeBytes:
+          type: integer
+          minimum: 0
+        status:
+          $ref: '#/components/schemas/ProductDocumentStatus'
+        engineDocumentId:
+          type: string
+          nullable: true
+        errorReason:
+          $ref: '#/components/schemas/ProductDocumentErrorReason'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ProductDocumentEnvelope:
+      type: object
+      additionalProperties: false
+      required: [document]
+      properties:
+        document:
+          $ref: '#/components/schemas/ProductDocument'
+    ProductDocumentsEnvelope:
+      type: object
+      additionalProperties: false
+      required: [documents]
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductDocument'
+    ChatTurnRole:
+      type: string
+      enum: [user, assistant]
+    ChatTurn:
+      type: object
+      additionalProperties: false
+      required: [role, text]
+      properties:
+        role:
+          $ref: '#/components/schemas/ChatTurnRole'
+        text:
+          type: string
+          minLength: 1
+          maxLength: 4000
+    ChatRequest:
+      type: object
+      additionalProperties: false
+      required: [question]
+      properties:
+        question:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        history:
+          type: array
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/ChatTurn'
+    ChatResponse:
+      type: object
+      additionalProperties: false
+      required: [answer, usedRag]
+      properties:
+        answer:
+          type: string
+        usedRag:
+          type: boolean

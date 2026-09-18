@@ -1,0 +1,119 @@
+<div class="min-h-screen flex">
+  <!-- Sidebar -->
+  <aside class="hidden md:flex flex-col w-[260px] shrink-0 m-4 mr-0 rounded-[26px] glass p-4">
+    <a class="flex items-center gap-3 px-2 py-3 mb-4" routerLink="/agent" aria-label="Ir a Agente IA">
+      <div
+        class="w-10 h-10 rounded-[14px] grid place-items-center shrink-0"
+        style="background:linear-gradient(135deg,#00A94F,#00722f); box-shadow:0 10px 22px -10px rgba(0,169,79,.9)"
+      >
+        <i class="bi bi-shield-shaded text-[18px]" style="color:#FFD100" aria-hidden="true"></i>
+      </div>
+      <div class="leading-tight">
+        <p class="font-extrabold text-[15px] text-ink">Bolívar</p>
+        <p class="text-[11px] text-ink/40">Agente 360</p>
+      </div>
+    </a>
+
+    @if (sessionState.isAdministrator()) {
+      <p class="text-[10.5px] uppercase tracking-[.14em] text-ink/25 px-3 mb-2">Gestión</p>
+      <nav class="space-y-1.5 mb-6" aria-label="Administración">
+        @if (sessionState.hasPermission('emails:manage') && sessionState.hasPermission('users:read')) {
+          <a class="nav-item w-full" routerLink="/correos-conectados" routerLinkActive="active">
+            <i class="bi bi-envelope-at" aria-hidden="true"></i>
+            Correos conectados
+          </a>
+        }
+        @if (sessionState.hasPermission('products:read')) {
+          <a class="nav-item w-full" routerLink="/productos" routerLinkActive="active">
+            <i class="bi bi-box-seam" aria-hidden="true"></i>
+            Productos
+          </a>
+        }
+      </nav>
+    }
+
+    @if (sessionState.hasPermission('agent:read')) {
+      <p class="text-[10.5px] uppercase tracking-[.14em] text-ink/25 px-3 mb-2">Inteligencia</p>
+      <nav class="space-y-1.5" aria-label="Inteligencia">
+        <a class="nav-item w-full" routerLink="/agent" routerLinkActive="active">
+          <i class="bi bi-stars" aria-hidden="true"></i>
+          Agente IA
+        </a>
+      </nav>
+    }
+
+    <div class="mt-auto">
+      <div class="flex items-center gap-3 p-2 rounded-[16px] hover:bg-ink/5 transition">
+        <div
+          class="w-9 h-9 rounded-full grid place-items-center text-[13px] font-bold shrink-0"
+          style="background:linear-gradient(135deg,#FFD100,#E5B800); color:#02150C"
+          aria-hidden="true"
+        >
+          {{ (sessionState.user()?.displayName ?? sessionState.user()?.email ?? '?').charAt(0).toUpperCase() }}
+        </div>
+        <div class="leading-tight min-w-0">
+          <p class="text-[13px] font-semibold truncate text-ink">
+            {{ sessionState.user()?.displayName ?? sessionState.user()?.email ?? 'Usuario' }}
+          </p>
+          <p class="text-[11px] text-ink/40 truncate">{{ sessionState.user()?.email }}</p>
+        </div>
+        <button
+          class="ml-auto w-8 h-8 grid place-items-center rounded-lg text-ink/35 hover:text-red-500 hover:bg-red-500/10 transition"
+          type="button"
+          (click)="logout()"
+          [disabled]="isLoggingOut()"
+          [attr.aria-label]="isLoggingOut() ? 'Cerrando sesión' : 'Cerrar sesión'"
+        >
+          <i class="bi bi-box-arrow-right text-[14px]" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 min-w-0 flex flex-col p-4 pb-24 md:pb-4 overflow-hidden">
+    <header class="glass rounded-[22px] px-4 sm:px-5 py-3.5 flex items-center gap-3 mb-4 shrink-0">
+      <div class="min-w-0">
+        <h1 class="text-[16px] font-bold truncate text-ink">{{ page().heading }}</h1>
+        @if (page().subheading; as subheading) {
+          <p class="text-[12px] text-ink/40 truncate">{{ subheading }}</p>
+        }
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <span class="hidden sm:flex items-center gap-2 text-[12px] text-ink/50 px-3 py-1.5 rounded-full glass-soft">
+          <span class="w-1.5 h-1.5 rounded-full bg-bolivar-500 animate-pulse"></span> Conectado
+        </span>
+        <div
+          class="md:hidden w-9 h-9 rounded-full grid place-items-center text-[12px] font-bold"
+          style="background:linear-gradient(135deg,#FFD100,#E5B800); color:#02150C"
+          aria-hidden="true"
+        >
+          {{ (sessionState.user()?.displayName ?? sessionState.user()?.email ?? '?').charAt(0).toUpperCase() }}
+        </div>
+      </div>
+    </header>
+
+    <div class="flex-1 min-h-0 overflow-y-auto pr-1">
+      <router-outlet />
+    </div>
+  </main>
+
+  <!-- Nav móvil -->
+  <nav class="md:hidden fixed bottom-4 left-4 right-4 z-40 glass rounded-[22px] p-1.5 flex" aria-label="Navegación principal">
+    @if (sessionState.hasPermission('agent:read')) {
+      <a class="nav-item flex-1 !justify-center !flex-col !gap-1 !py-2" routerLink="/agent" routerLinkActive="active">
+        <i class="bi bi-stars" aria-hidden="true"></i><span class="text-[10.5px]">Agente</span>
+      </a>
+    }
+    @if (sessionState.isAdministrator() && sessionState.hasPermission('emails:manage') && sessionState.hasPermission('users:read')) {
+      <a class="nav-item flex-1 !justify-center !flex-col !gap-1 !py-2" routerLink="/correos-conectados" routerLinkActive="active">
+        <i class="bi bi-envelope-at" aria-hidden="true"></i><span class="text-[10.5px]">Correos</span>
+      </a>
+    }
+    @if (sessionState.isAdministrator() && sessionState.hasPermission('products:read')) {
+      <a class="nav-item flex-1 !justify-center !flex-col !gap-1 !py-2" routerLink="/productos" routerLinkActive="active">
+        <i class="bi bi-box-seam" aria-hidden="true"></i><span class="text-[10.5px]">Productos</span>
+      </a>
+    }
+  </nav>
+</div>

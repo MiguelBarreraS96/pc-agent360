@@ -1,0 +1,69 @@
+<main class="min-h-screen grid place-items-center p-4 sm:p-8" aria-labelledby="email-link-title">
+  <div class="w-full max-w-[420px]">
+    <div class="flex flex-col items-center mb-7 rise">
+      <div
+        class="float-soft w-[62px] h-[62px] rounded-[20px] grid place-items-center mb-4"
+        style="background:linear-gradient(135deg,#00A94F,#00722f); box-shadow:0 18px 40px -14px rgba(0,169,79,.9), inset 0 1px 0 rgba(255,255,255,.25)"
+      >
+        <i class="bi bi-shield-shaded text-[26px]" style="color:#FFD100" aria-hidden="true"></i>
+      </div>
+      <h1 class="text-[26px] font-extrabold tracking-tight">Seguros <span style="color:#B38F00">Bolívar</span></h1>
+      <p class="text-sm text-ink/45 mt-1">Agente 360 · Acceso seguro</p>
+    </div>
+
+    <section class="glass rounded-[28px] p-7 sm:p-8 rise" style="animation-delay:.12s">
+      @if (isValidLink()) {
+        <h2 id="email-link-title" class="text-lg font-bold">Confirme su correo</h2>
+        <p class="text-[13px] text-ink/45 mt-1 mb-6">
+          Ingrese el mismo correo usado al solicitar el enlace. No se conserva esta dirección después del acceso.
+        </p>
+
+        <form class="space-y-4" [formGroup]="form" (ngSubmit)="completeSignIn()" novalidate>
+          <div>
+            <label for="confirmation-email" class="block text-[12px] font-semibold text-ink/55 mb-2 ml-1">Correo corporativo</label>
+            <div class="relative">
+              <input
+                id="confirmation-email"
+                class="field"
+                type="email"
+                formControlName="email"
+                autocomplete="email"
+                inputmode="email"
+                maxlength="254"
+                placeholder="nombre@segurosbolivar.com"
+                aria-describedby="confirmation-email-error"
+              >
+              <i class="bi bi-envelope-check field-ico" aria-hidden="true"></i>
+            </div>
+            @if (form.controls.email.touched && form.controls.email.invalid) {
+              <p id="confirmation-email-error" class="text-[12.5px] text-red-600 mt-1 ml-1">Ingrese un correo válido.</p>
+            }
+          </div>
+
+          @if (errorMessage(); as message) {
+            <p class="text-[12.5px] text-red-600 bg-red-500/10 border border-red-500/25 rounded-xl px-3 py-2" role="alert">
+              <i class="bi bi-exclamation-circle mr-1" aria-hidden="true"></i>{{ message }}
+            </p>
+          }
+
+          <button class="btn-primary w-full py-3.5 mt-2 flex items-center justify-center gap-2" type="submit" [disabled]="isSubmitting()">
+            @if (isSubmitting()) {
+              <span class="inline-block w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin" aria-hidden="true"></span>
+              <span>Validando acceso</span>
+            } @else {
+              <i class="bi bi-check2-circle" aria-hidden="true"></i>
+              <span>Continuar de forma segura</span>
+            }
+          </button>
+        </form>
+      } @else {
+        <h2 id="email-link-title" class="text-lg font-bold">No fue posible continuar</h2>
+        <p class="text-[13px] text-ink/45 mt-1 mb-6">El enlace no es válido o ya expiró. Solicite uno nuevo para acceder.</p>
+        <a class="btn-primary w-full py-3.5 flex items-center justify-center gap-2" routerLink="/login">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+          <span>Volver al acceso</span>
+        </a>
+      }
+    </section>
+  </div>
+</main>

@@ -10,7 +10,7 @@
     "start": "ng serve",
     "build": "ng build",
     "typecheck": "ng build --configuration development",
-    "deploy": "gcloud run deploy pl-agent360 --source . --project sb-dominique-ai --region us-central1 --port 8080 --allow-unauthenticated --ingress=all --cpu=1 --memory=256Mi --timeout=15s --concurrency=80 --min-instances=0 --max-instances=2 --quiet"
+    "deploy": "node scripts/deploy.mjs"
   },
   "dependencies": {
     "@angular/common": "20.3.0",
@@ -19,6 +19,8 @@
     "@angular/forms": "20.3.0",
     "@angular/platform-browser": "20.3.0",
     "@angular/router": "20.3.0",
+    "bootstrap-icons": "1.11.3",
+    "firebase": "11.0.2",
     "rxjs": "7.8.0",
     "tslib": "2.3.0",
     "zone.js": "0.15.0"
@@ -27,6 +29,9 @@
     "@angular/build": "20.3.9",
     "@angular/cli": "20.3.9",
     "@angular/compiler-cli": "20.3.0",
+    "autoprefixer": "10.4.20",
+    "postcss": "8.4.49",
+    "tailwindcss": "3.4.17",
     "typescript": "5.9.2"
   }
 }

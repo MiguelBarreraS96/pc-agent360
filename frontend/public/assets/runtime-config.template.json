@@ -1,0 +1,11 @@
+{
+  "apiBaseUrl": "${API_BASE_URL}",
+  "emailLinkContinueUrl": "${EMAIL_LINK_CONTINUE_URL}",
+  "firebase": {
+    "apiKey": "${FIREBASE_API_KEY}",
+    "appId": "${FIREBASE_APP_ID}",
+    "authDomain": "${FIREBASE_AUTH_DOMAIN}",
+    "projectId": "${FIREBASE_PROJECT_ID}"
+  },
+  "inactivityTimeoutSeconds": ${INACTIVITY_TIMEOUT_SECONDS}
+}

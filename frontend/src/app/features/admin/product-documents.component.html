@@ -1,0 +1,95 @@
+<div class="modal open">
+  <div class="modal-bg" (click)="close()"></div>
+  <div class="modal-card glass rounded-[28px] w-full max-w-[640px] max-h-[92vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="product-documents-title">
+    <div class="flex items-center gap-3 px-6 py-5 border-b border-ink/10">
+      <div
+        class="w-10 h-10 rounded-[14px] grid place-items-center"
+        style="background:linear-gradient(135deg, rgba(0,169,79,.14), rgba(255,209,0,.14)); border:1px solid rgba(0,169,79,.22)"
+      >
+        <i class="bi bi-database-gear text-bolivar-600" aria-hidden="true"></i>
+      </div>
+      <div class="min-w-0">
+        <h3 id="product-documents-title" class="font-bold text-ink truncate">Base de conocimiento — {{ product().name }}</h3>
+        <p class="text-[12px] text-ink/40">Motor de búsqueda y clausulados cargados para este producto</p>
+      </div>
+      <button class="ml-auto btn-ghost w-9 h-9 grid place-items-center shrink-0" type="button" (click)="close()" aria-label="Cerrar">
+        <i class="bi bi-x-lg text-[13px]" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="p-6 space-y-4">
+      @if (product().rag.state !== 'active') {
+        <div class="text-[12.5px] rounded-xl px-3 py-2.5 flex items-center gap-2" [style.background]="'rgba(255,209,0,.12)'" [style.color]="'#8a6d00'">
+          <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+          @if (product().rag.state === 'creating') {
+            <span>El motor de búsqueda se está aprovisionando. Esta vista se actualiza automáticamente.</span>
+          } @else if (product().rag.state === 'error') {
+            <span>El motor de búsqueda tiene un error de aprovisionamiento. No es posible cargar documentos.</span>
+          } @else {
+            <span>Este producto todavía no tiene un motor de búsqueda activo.</span>
+          }
+        </div>
+      }
+
+      <div class="flex items-center gap-3">
+        <button
+          class="btn-primary px-4 py-2.5 text-[13px] flex items-center justify-center gap-2 shrink-0"
+          type="button"
+          (click)="pickFile()"
+          [disabled]="product().rag.state !== 'active' || isUploading()"
+        >
+          @if (isUploading()) {
+            <span class="inline-block w-3.5 h-3.5 border-2 border-current border-r-transparent rounded-full animate-spin" aria-hidden="true"></span>
+            Cargando…
+          } @else {
+            <i class="bi bi-cloud-upload" aria-hidden="true"></i>
+            Cargar documento
+          }
+        </button>
+        <p class="text-[11.5px] text-ink/40">PDF, DOC, DOCX o TXT — máximo 50 MB</p>
+        <input #fileInput type="file" class="sr-only" accept=".pdf,.doc,.docx,.txt" (change)="onFileSelected($event)">
+      </div>
+
+      @if (errorMessage(); as message) {
+        <div class="text-[12.5px] text-red-700 bg-red-500/10 border border-red-500/25 rounded-xl px-3 py-2" role="alert">
+          <p>{{ message }}</p>
+          @if (errorSupportId(); as supportId) {
+            <p class="text-[11.5px] text-red-600 mt-1">Código de soporte: {{ supportId }}</p>
+          }
+        </div>
+      }
+
+      <div class="space-y-2">
+        @if (isLoading() && documents().length === 0) {
+          <div class="glass-soft rounded-[18px] p-6 flex items-center justify-center gap-3 text-ink/45 text-[13px]" role="status">
+            <span class="inline-block w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin" aria-hidden="true"></span>
+            Cargando documentos
+          </div>
+        } @else {
+          @for (document of documents(); track document.id) {
+            <div class="row-in glass-soft rounded-[16px] p-3 flex items-center gap-3">
+              <i class="bi bi-file-earmark-text text-ink/35 text-[18px] shrink-0" aria-hidden="true"></i>
+              <div class="min-w-0 flex-1">
+                <p class="text-[13px] font-medium text-ink truncate">{{ document.fileName }}</p>
+                <p class="text-[11px] text-ink/40">{{ formatSize(document.sizeBytes) }}</p>
+              </div>
+              <span class="state-chip shrink-0" [style.background]="statusStyle(document.status).background" [style.color]="statusStyle(document.status).color">
+                {{ statusLabel(document.status) }}
+              </span>
+              <button
+                class="w-8 h-8 grid place-items-center rounded-lg text-ink/30 hover:text-red-500 hover:bg-red-500/10 transition shrink-0"
+                type="button"
+                (click)="deleteDocument(document)"
+                aria-label="Eliminar documento"
+              >
+                <i class="bi bi-trash3 text-[12.5px]" aria-hidden="true"></i>
+              </button>
+            </div>
+          } @empty {
+            <div class="text-center py-10 text-ink/40 text-sm">Aún no hay documentos cargados.</div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,133 @@
+<section aria-label="Productos" class="space-y-4">
+  <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+    <div>
+      <h2 class="font-bold text-[15px] text-ink">Catálogo de productos</h2>
+      <p class="text-[12px] text-ink/40">Cada producto tiene su propio motor de búsqueda y base de conocimiento.</p>
+    </div>
+    <button class="btn-primary sm:ml-auto px-4 py-2.5 text-[13px] flex items-center justify-center gap-2 shrink-0" type="button" (click)="openCreateModal()">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i>
+      Nuevo producto
+    </button>
+  </div>
+
+  @if (isLoading()) {
+    <div class="glass rounded-[24px] p-10 flex items-center justify-center gap-3 text-ink/45 text-[13px]" role="status">
+      <span class="inline-block w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin" aria-hidden="true"></span>
+      Cargando productos
+    </div>
+  } @else if (listErrorMessage(); as message) {
+    <div class="text-[13px] text-red-700 bg-red-500/10 border border-red-500/25 rounded-2xl px-4 py-3" role="alert">
+      <p>{{ message }}</p>
+      @if (listErrorSupportId(); as supportId) {
+        <p class="text-[12px] text-red-600 mt-1">Código de soporte: {{ supportId }}</p>
+      }
+      <button class="btn-ghost px-4 py-2 text-[13px] mt-3" type="button" (click)="reload()">Reintentar</button>
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 stagger">
+      @for (product of products(); track product.id) {
+        <article class="glass glass-hover rounded-[22px] p-4">
+          <div class="flex items-start gap-3 mb-4">
+            <div
+              class="w-[46px] h-[46px] rounded-[16px] grid place-items-center text-[21px] shrink-0"
+              style="background:linear-gradient(135deg,#00A94F,#00722f); color:#FFD100; box-shadow:0 12px 26px -12px rgba(0,169,79,.85)"
+            >
+              <i [class]="product.icon" aria-hidden="true"></i>
+            </div>
+            <span class="state-chip ml-auto shrink-0" [style.background]="ragStateStyle(product.rag.state).background" [style.color]="ragStateStyle(product.rag.state).color">
+              {{ ragStateLabel(product.rag.state) }}
+            </span>
+          </div>
+          <h3 class="font-semibold text-[15px] leading-snug text-ink truncate">{{ product.name }}</h3>
+          <p class="text-[12.5px] text-ink/45 mt-2 font-mono truncate">{{ product.icon }}</p>
+
+          <div class="flex items-center gap-2 mt-4">
+            <button class="btn-ghost flex-1 py-2 text-[12.5px] flex items-center justify-center gap-1.5" type="button" (click)="openDocuments(product)">
+              <i class="bi bi-database-gear" aria-hidden="true"></i>
+              Documentos
+            </button>
+            <button
+              class="w-9 h-9 grid place-items-center rounded-lg text-ink/30 hover:text-bolivar-600 hover:bg-bolivar-500/10 transition shrink-0"
+              type="button"
+              (click)="openEditModal(product)"
+              aria-label="Editar producto"
+            >
+              <i class="bi bi-pencil text-[12.5px]" aria-hidden="true"></i>
+            </button>
+            <button
+              class="w-9 h-9 grid place-items-center rounded-lg text-ink/30 hover:text-red-500 hover:bg-red-500/10 transition shrink-0"
+              type="button"
+              (click)="deleteProduct(product)"
+              [disabled]="isSaving()"
+              aria-label="Eliminar producto"
+            >
+              <i class="bi bi-trash3 text-[12.5px]" aria-hidden="true"></i>
+            </button>
+          </div>
+        </article>
+      } @empty {
+        <div class="col-span-full text-center py-14 text-ink/40 text-sm">No hay productos para mostrar.</div>
+      }
+    </div>
+  }
+</section>
+
+<div class="modal" [class.open]="isModalOpen()">
+  <div class="modal-bg" (click)="closeModal()"></div>
+  <div class="modal-card glass rounded-[28px] w-full max-w-[520px] max-h-[92vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+    <div class="flex items-center gap-3 px-6 py-5 border-b border-ink/10">
+      <div
+        class="w-10 h-10 rounded-[14px] grid place-items-center"
+        style="background:linear-gradient(135deg, rgba(0,169,79,.14), rgba(255,209,0,.14)); border:1px solid rgba(0,169,79,.22)"
+      >
+        <i class="bi bi-box-seam text-bolivar-600" aria-hidden="true"></i>
+      </div>
+      <div>
+        <h3 id="product-modal-title" class="font-bold text-ink">{{ editingProduct() === null ? 'Crear producto' : 'Actualizar producto' }}</h3>
+        <p class="text-[12px] text-ink/40">Defina el nombre y el icono del producto</p>
+      </div>
+      <button class="ml-auto btn-ghost w-9 h-9 grid place-items-center shrink-0" type="button" (click)="closeModal()" aria-label="Cerrar">
+        <i class="bi bi-x-lg text-[13px]" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <form class="p-6 space-y-4" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div>
+        <label for="product-name" class="block text-[12px] font-semibold text-ink/55 mb-2">Nombre</label>
+        <input id="product-name" class="field field-plain" type="text" formControlName="name" autocomplete="off" maxlength="120">
+        @if (form.controls.name.touched && form.controls.name.invalid) {
+          <p class="text-[12px] text-red-600 mt-1">Ingrese un nombre para el producto.</p>
+        }
+      </div>
+
+      <div>
+        <label class="block text-[12px] font-semibold text-ink/55 mb-2">Icono</label>
+        <app-icon-picker formControlName="icon" />
+        @if (form.controls.icon.touched && form.controls.icon.invalid) {
+          <p class="text-[12px] text-red-600 mt-1">Seleccione un icono para el producto.</p>
+        }
+      </div>
+
+      @if (errorMessage(); as message) {
+        <div class="text-[12.5px] text-red-700 bg-red-500/10 border border-red-500/25 rounded-xl px-3 py-2" role="alert">
+          <p>{{ message }}</p>
+          @if (errorSupportId(); as supportId) {
+            <p class="text-[11.5px] text-red-600 mt-1">Código de soporte: {{ supportId }}</p>
+          }
+        </div>
+      }
+
+      <div class="flex gap-3 pt-1">
+        <button class="btn-ghost flex-1 py-3 text-sm font-medium" type="button" (click)="closeModal()">Cancelar</button>
+        <button class="btn-primary flex-1 py-3 text-sm flex items-center justify-center gap-2" type="submit" [disabled]="isSaving()">
+          <i class="bi bi-check2" aria-hidden="true"></i>
+          {{ editingProduct() === null ? 'Crear producto' : 'Guardar cambios' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+@if (documentsProduct(); as product) {
+  <app-product-documents [product]="product" (closed)="closeDocuments()" (productChanged)="onDocumentsProductChanged($event)" />
+}

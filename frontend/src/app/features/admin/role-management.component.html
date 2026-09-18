@@ -1,0 +1,202 @@
+<article class="glass rounded-[24px] p-4 sm:p-5" aria-labelledby="roles-title">
+  <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+    <div>
+      <h2 id="roles-title" class="font-bold text-[15px] text-ink">Roles autorizados</h2>
+      <p class="text-[12px] text-ink/40">El rol ADMIN permite editar sus permisos; los demás roles protegidos son solo de lectura.</p>
+    </div>
+    <button class="btn-primary sm:ml-auto px-4 py-2.5 text-[13px] flex items-center justify-center gap-2 shrink-0" type="button" (click)="openCreateModal()">
+      <i class="bi bi-person-gear" aria-hidden="true"></i>
+      Nuevo rol
+    </button>
+  </div>
+
+  <div class="space-y-2">
+    @for (role of roles(); track role.id) {
+      <div class="row-in glass-soft rounded-[18px] p-3.5">
+        <div class="flex items-center gap-3">
+          <div class="min-w-0 flex-1">
+            <p class="text-[13.5px] font-semibold truncate text-ink">{{ role.name }}</p>
+            <p class="text-[11.5px] text-ink/40 truncate font-mono">{{ role.key }}</p>
+          </div>
+          <span
+            class="state-chip shrink-0"
+            [style.background]="role.isProtected ? 'rgba(255,209,0,.14)' : 'rgba(0,169,79,.10)'"
+            [style.color]="role.isProtected ? '#8a6d00' : '#00803b'"
+          >
+            {{ role.isProtected ? 'Protegido' : 'Personalizado' }}
+          </span>
+          @if (canEditRole(role)) {
+            <button
+              class="w-8 h-8 grid place-items-center rounded-lg text-ink/30 hover:text-bolivar-600 hover:bg-bolivar-500/10 transition shrink-0"
+              type="button"
+              (click)="openEditModal(role)"
+              [attr.aria-label]="role.isProtected ? 'Editar permisos del rol administrador' : 'Editar rol personalizado'"
+            >
+              <i class="bi bi-pencil text-[12.5px]" aria-hidden="true"></i>
+            </button>
+          }
+          @if (!role.isProtected) {
+            <button
+              class="w-8 h-8 grid place-items-center rounded-lg text-ink/30 hover:text-red-500 hover:bg-red-500/10 transition shrink-0"
+              type="button"
+              (click)="deleteRole(role)"
+              [disabled]="isSaving()"
+              aria-label="Eliminar rol personalizado"
+            >
+              <i class="bi bi-trash3 text-[12.5px]" aria-hidden="true"></i>
+            </button>
+          } @else if (role.key === 'ADMIN') {
+            <span class="text-[11.5px] text-bolivar-600 shrink-0">Permisos editables</span>
+          } @else {
+            <span class="text-[11.5px] text-ink/40 shrink-0">Solo lectura</span>
+          }
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mt-3">
+          @for (permission of role.permissions; track permission) {
+            <span class="flex items-center gap-1.5 text-[11.5px] text-ink/60 bg-white/55 border border-ink/10 rounded-lg px-2 py-1.5">
+              <i class="bi bi-check-circle-fill text-bolivar-500 text-[10px] shrink-0" aria-hidden="true"></i>
+              <span class="truncate">{{ permissionLabel(permission) }}</span>
+            </span>
+          }
+        </div>
+      </div>
+    } @empty {
+      <div class="text-center py-14 text-ink/40 text-sm">No hay roles para mostrar.</div>
+    }
+  </div>
+</article>
+
+<div class="modal" [class.open]="isModalOpen()">
+  <div class="modal-bg" (click)="closeModal()"></div>
+  <div class="modal-card glass rounded-[28px] w-full max-w-[560px] max-h-[92vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="role-modal-title">
+    <div class="flex items-center gap-3 px-6 py-5 border-b border-ink/10">
+      <div
+        class="w-10 h-10 rounded-[14px] grid place-items-center"
+        style="background:linear-gradient(135deg, rgba(0,169,79,.14), rgba(255,209,0,.14)); border:1px solid rgba(0,169,79,.22)"
+      >
+        <i class="bi bi-person-gear text-bolivar-600" aria-hidden="true"></i>
+      </div>
+      <div>
+        <h3 id="role-modal-title" class="font-bold text-ink">{{ editingRole() === null ? 'Crear rol personalizado' : isEditingProtectedRole() ? 'Actualizar permisos de Administrador' : 'Actualizar rol personalizado' }}</h3>
+        <p class="text-[12px] text-ink/40">{{ isEditingProtectedRole() ? 'Seleccione los permisos que podrá usar el rol ADMIN' : 'Defina la clave, el nombre y los permisos del rol' }}</p>
+      </div>
+      <button class="ml-auto btn-ghost w-9 h-9 grid place-items-center shrink-0" type="button" (click)="closeModal()" aria-label="Cerrar">
+        <i class="bi bi-x-lg text-[13px]" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <form class="p-6 space-y-4" [formGroup]="form" (ngSubmit)="save()" novalidate>
+      @if (!isEditingProtectedRole()) {
+        <div>
+          <label for="role-key" class="block text-[12px] font-semibold text-ink/55 mb-2">Clave del rol</label>
+          <input id="role-key" class="field field-plain" type="text" formControlName="key" autocomplete="off" maxlength="49">
+          @if (form.controls.key.touched && form.controls.key.invalid) {
+            <p class="text-[12px] text-red-600 mt-1">Use mayúsculas, números o guion bajo; mínimo dos caracteres.</p>
+          }
+        </div>
+
+        <div>
+          <label for="role-name" class="block text-[12px] font-semibold text-ink/55 mb-2">Nombre</label>
+          <input id="role-name" class="field field-plain" type="text" formControlName="name" autocomplete="off" maxlength="120">
+          @if (form.controls.name.touched && form.controls.name.invalid) {
+            <p class="text-[12px] text-red-600 mt-1">Ingrese un nombre para el rol.</p>
+          }
+        </div>
+
+        <div>
+          <label for="role-description" class="block text-[12px] font-semibold text-ink/55 mb-2">
+            Descripción <span class="text-ink/35" aria-hidden="true">(opcional)</span>
+          </label>
+          <textarea id="role-description" class="field field-plain" formControlName="description" rows="3" maxlength="500"></textarea>
+        </div>
+      } @else {
+        <div class="rounded-[14px] border border-bolivar-500/20 bg-bolivar-500/5 px-3.5 py-3 text-[12px] text-ink/60" role="note">
+          <p class="font-semibold text-ink">Administrador</p>
+          <p class="mt-1">La clave, el nombre y la protección del rol permanecen fijos; solo puede actualizar sus permisos.</p>
+        </div>
+      }
+
+      <fieldset class="rounded-[14px] border border-ink/10 bg-white/40 p-3.5">
+        <legend class="text-[12px] font-semibold text-ink/55 px-1">Permisos permitidos</legend>
+        <div class="grid sm:grid-cols-2 gap-2 mt-1">
+          <label class="flex items-center gap-2.5 text-[13px] text-ink/65 cursor-pointer select-none">
+            <input type="checkbox" formControlName="agentRead" class="peer sr-only">
+            <span class="w-[18px] h-[18px] rounded-[6px] border border-ink/20 grid place-items-center peer-checked:bg-bolivar-500 peer-checked:border-bolivar-500 transition shrink-0">
+              <i class="bi bi-check text-[13px] text-white"></i>
+            </span>
+            Agente IA
+          </label>
+          <label class="flex items-center gap-2.5 text-[13px] text-ink/65 cursor-pointer select-none">
+            <input type="checkbox" formControlName="emailsManage" class="peer sr-only">
+            <span class="w-[18px] h-[18px] rounded-[6px] border border-ink/20 grid place-items-center peer-checked:bg-bolivar-500 peer-checked:border-bolivar-500 transition shrink-0">
+              <i class="bi bi-check text-[13px] text-white"></i>
+            </span>
+            Gestionar correos conectados
+          </label>
+          <label class="flex items-center gap-2.5 text-[13px] text-ink/65 cursor-pointer select-none">
+            <input type="checkbox" formControlName="productsRead" class="peer sr-only">
+            <span class="w-[18px] h-[18px] rounded-[6px] border border-ink/20 grid place-items-center peer-checked:bg-bolivar-500 peer-checked:border-bolivar-500 transition shrink-0">
+              <i class="bi bi-check text-[13px] text-white"></i>
+            </span>
+            Consultar productos
+          </label>
+          <label class="flex items-center gap-2.5 text-[13px] text-ink/65 cursor-pointer select-none">
+            <input type="checkbox" formControlName="productsWrite" class="peer sr-only">
+            <span class="w-[18px] h-[18px] rounded-[6px] border border-ink/20 grid place-items-center peer-checked:bg-bolivar-500 peer-checked:border-bolivar-500 transition shrink-0">
+              <i class="bi bi-check text-[13px] text-white"></i>
+            </span>
+            Gestionar productos
+          </label>
+          <label class="flex items-center gap-2.5 text-[13px] text-ink/65 cursor-pointer select-none">
+            <input type="checkbox" formControlName="usersRead" class="peer sr-only">
+            <span class="w-[18px] h-[18px] rounded-[6px] border border-ink/20 grid place-items-center peer-checked:bg-bolivar-500 peer-checked:border-bolivar-500 transition shrink-0">
+              <i class="bi bi-check text-[13px] text-white"></i>
+            </span>
+            Consultar usuarios
+          </label>
+          <label class="flex items-center gap-2.5 text-[13px] text-ink/65 cursor-pointer select-none">
+            <input type="checkbox" formControlName="usersWrite" class="peer sr-only">
+            <span class="w-[18px] h-[18px] rounded-[6px] border border-ink/20 grid place-items-center peer-checked:bg-bolivar-500 peer-checked:border-bolivar-500 transition shrink-0">
+              <i class="bi bi-check text-[13px] text-white"></i>
+            </span>
+            Gestionar usuarios
+          </label>
+          <label class="flex items-center gap-2.5 text-[13px] text-ink/65 cursor-pointer select-none">
+            <input type="checkbox" formControlName="rolesRead" class="peer sr-only">
+            <span class="w-[18px] h-[18px] rounded-[6px] border border-ink/20 grid place-items-center peer-checked:bg-bolivar-500 peer-checked:border-bolivar-500 transition shrink-0">
+              <i class="bi bi-check text-[13px] text-white"></i>
+            </span>
+            Consultar roles
+          </label>
+          <label class="flex items-center gap-2.5 text-[13px] text-ink/65 cursor-pointer select-none">
+            <input type="checkbox" formControlName="rolesWrite" class="peer sr-only">
+            <span class="w-[18px] h-[18px] rounded-[6px] border border-ink/20 grid place-items-center peer-checked:bg-bolivar-500 peer-checked:border-bolivar-500 transition shrink-0">
+              <i class="bi bi-check text-[13px] text-white"></i>
+            </span>
+            Gestionar roles
+          </label>
+        </div>
+        @if (isEditingProtectedRole()) {
+          <p class="mt-3 text-[11.5px] text-ink/45"><i class="bi bi-info-circle mr-1" aria-hidden="true"></i>Conserve Gestionar roles para no perder el acceso a esta administración.</p>
+        }
+      </fieldset>
+
+      @if (errorMessage(); as message) {
+        <div class="text-[12.5px] text-red-700 bg-red-500/10 border border-red-500/25 rounded-xl px-3 py-2" role="alert">
+          <p>{{ message }}</p>
+          @if (errorSupportId(); as supportId) {
+            <p class="text-[11.5px] text-red-600 mt-1">Código de soporte: {{ supportId }}</p>
+          }
+        </div>
+      }
+
+      <div class="flex gap-3 pt-1">
+        <button class="btn-ghost flex-1 py-3 text-sm font-medium" type="button" (click)="closeModal()">Cancelar</button>
+        <button class="btn-primary flex-1 py-3 text-sm flex items-center justify-center gap-2" type="submit" [disabled]="isSaving()">
+          <i class="bi bi-check2" aria-hidden="true"></i>
+          {{ editingRole() === null ? 'Crear rol' : isEditingProtectedRole() ? 'Guardar permisos' : 'Guardar cambios' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

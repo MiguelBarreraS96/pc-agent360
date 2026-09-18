@@ -1,7 +1,11 @@
 import type { Server } from "node:http";
 
+import type { Firestore } from "firebase-admin/firestore";
+
 import { createApp } from "./app";
+import { createApplicationDependencies } from "./composition";
 import { appConfig } from "./config";
+import { createFirestoreClient } from "./database/firestore";
 import { logEvent, type LogFields } from "./logger";
 
 const SHUTDOWN_TIMEOUT_MILLISECONDS = 10_000;
@@ -24,26 +28,38 @@ function forceShutdown(): void {
   process.exit(1);
 }
 
-/** Stop accepting connections and finish active requests after a process signal. */
-function gracefullyShutdown(server: Server, signal: NodeJS.Signals): void {
+/** Close the Firestore client after active HTTP requests have finished. */
+async function closeFirestore(firestore: Firestore, hadServerError: boolean, timeout: NodeJS.Timeout): Promise<void> {
+  try {
+    await firestore.terminate();
+    logEvent("INFO", "server_shutdown_completed", systemLogFields());
+  } catch {
+    logEvent("ERROR", "database_shutdown_failed", systemLogFields());
+    process.exitCode = 1;
+  } finally {
+    clearTimeout(timeout);
+    if (hadServerError) {
+      process.exitCode = 1;
+    }
+  }
+}
+
+/** Stop accepting connections and close Firestore after a process signal. */
+function gracefullyShutdown(server: Server, firestore: Firestore, signal: NodeJS.Signals): void {
   logEvent("INFO", "server_shutdown_started", systemLogFields({ signal }));
   const timeout = setTimeout(forceShutdown, SHUTDOWN_TIMEOUT_MILLISECONDS);
   timeout.unref();
 
   server.close((error?: Error): void => {
-    clearTimeout(timeout);
     if (error !== undefined) {
       logEvent("ERROR", "server_shutdown_failed", systemLogFields());
-      process.exitCode = 1;
-      return;
     }
-
-    logEvent("INFO", "server_shutdown_completed", systemLogFields());
+    void closeFirestore(firestore, error !== undefined, timeout);
   });
 }
 
 /** Register one-time process handlers that invoke the graceful shutdown path. */
-function registerShutdownHandlers(server: Server): void {
+function registerShutdownHandlers(server: Server, firestore: Firestore): void {
   let isShuttingDown = false;
 
   const handleSignal = (signal: NodeJS.Signals): void => {
@@ -52,20 +68,22 @@ function registerShutdownHandlers(server: Server): void {
     }
 
     isShuttingDown = true;
-    gracefullyShutdown(server, signal);
+    gracefullyShutdown(server, firestore, signal);
   };
 
   process.once("SIGINT", () => handleSignal("SIGINT"));
   process.once("SIGTERM", () => handleSignal("SIGTERM"));
 }
 
-/** Start the HTTP server using validated environment configuration. */
+/** Start the HTTP server using validated configuration and injected infrastructure adapters. */
 export function startServer(): Server {
-  const server = createApp().listen(appConfig.port, appConfig.host, () => {
+  const firestore = createFirestoreClient(appConfig);
+  const dependencies = createApplicationDependencies(appConfig, firestore);
+  const server = createApp(dependencies).listen(appConfig.port, appConfig.host, () => {
     logEvent("INFO", "server_started", systemLogFields({ host: appConfig.host, port: appConfig.port }));
   });
 
-  registerShutdownHandlers(server);
+  registerShutdownHandlers(server, firestore);
   return server;
 }
 
