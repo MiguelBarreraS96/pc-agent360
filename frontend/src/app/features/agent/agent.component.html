@@ -1,15 +1,17 @@
-<section class="h-full min-h-[560px] grid place-items-center py-6" aria-label="Asistente de ventas">
-  <div class="relative">
-    <div class="halo" aria-hidden="true"></div>
+<section class="h-full min-h-[26rem] flex items-center overflow-hidden" aria-label="Asistente de ventas">
+  <div class="relative w-full" [class.h-full]="stage() === 'chat'">
+    @if (stage() === 'intro') {
+      <div class="halo" aria-hidden="true"></div>
+    }
 
     <div class="agent-shell glass" [class.expanded]="stage() === 'chat'">
       <!-- Intro: cédula del cliente -->
-      <div class="agent-pane grid place-items-center p-7" [class.show]="stage() === 'intro'" [class.hide]="stage() !== 'intro'">
+      <div class="agent-pane grid place-items-center overflow-y-auto p-5 sm:p-7" [class.show]="stage() === 'intro'" [class.hide]="stage() !== 'intro'">
         <div class="w-full max-w-[460px] text-center">
           <div class="flex justify-center mb-4">
             <div class="orb float-soft" aria-hidden="true"></div>
           </div>
-          <h2 class="text-[19px] font-bold text-ink">Asistente Bolívar</h2>
+          <h2 class="text-[17px] sm:text-[19px] font-bold text-ink">Asistente Bolívar</h2>
           <p class="text-[13px] text-ink/45 mt-1.5 mb-5">Ingresa la cédula del cliente para preparar tu venta</p>
 
           <form class="relative" [formGroup]="citizenIdForm" (ngSubmit)="startConsultation()">
@@ -43,7 +45,7 @@
 
       <!-- Conversación: chat a la izquierda, tarjetas a la derecha -->
       <div class="agent-pane flex flex-col" [class.show]="stage() === 'chat'" [class.hide]="stage() !== 'chat'">
-        <div class="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-ink/10 shrink-0">
+        <div class="flex items-center gap-3 px-3 sm:px-5 py-2.5 border-b border-ink/10 shrink-0">
           <div
             class="w-9 h-9 rounded-full grid place-items-center shrink-0"
             style="background:linear-gradient(135deg,#00A94F,#FFD100); box-shadow:0 8px 18px -8px rgba(0,169,79,.9)"
@@ -63,7 +65,7 @@
             </p>
           </div>
 
-          <div class="lg:hidden ml-auto flex rounded-full bg-ink/[.06] p-0.5 text-[12px]" role="tablist" aria-label="Vista">
+          <div class="xl:hidden ml-auto flex rounded-full bg-ink/[.06] p-0.5 text-[12px]" role="tablist" aria-label="Vista">
             <button
               type="button"
               role="tab"
@@ -83,7 +85,7 @@
           </div>
 
           <button
-            class="lg:ml-auto btn-ghost px-3 py-2 text-[12px] flex items-center gap-1.5 shrink-0"
+            class="xl:ml-auto btn-ghost px-3 py-2 text-[12px] flex items-center gap-1.5 shrink-0"
             type="button"
             [disabled]="isTyping()"
             (click)="resetConsultation()"
@@ -94,8 +96,8 @@
 
         <div class="flex-1 min-h-0 flex">
           <!-- Chat -->
-          <div class="min-w-0 flex-1 flex flex-col" [class]="mobileTab() === 'panel' ? 'max-lg:hidden' : ''">
-            <div class="flex-1 overflow-y-auto px-4 sm:px-5 py-5 space-y-3.5" #chatBody [attr.aria-busy]="isTyping()">
+          <div class="min-w-0 flex-1 flex flex-col" [class]="mobileTab() === 'panel' ? 'max-xl:hidden' : ''">
+            <div class="flex-1 overflow-y-auto px-3 sm:px-5 py-4 space-y-3" #chatBody [attr.aria-busy]="isTyping()">
               @for (message of messages(); track message.id) {
                 @if (message.role === 'me') {
                   <div class="msg flex justify-end">
@@ -131,7 +133,7 @@
               }
             </div>
 
-            <div class="px-4 sm:px-5 pb-4 pt-2 shrink-0">
+            <div class="px-3 sm:px-5 pb-3 pt-2 shrink-0">
               @if (hasSelectedProduct()) {
                 <div class="flex gap-2 overflow-x-auto pb-2.5 -mx-1 px-1" role="group" aria-label="Acciones rápidas">
                   @for (group of fastActionGroups(); track group.group) {
@@ -176,8 +178,8 @@
 
           <!-- Tarjetas -->
           <aside
-            class="min-w-0 lg:w-[440px] max-lg:flex-1 shrink-0 overflow-y-auto p-3.5 space-y-3.5 lg:border-l border-ink/10 bg-ink/[.02]"
-            [class]="mobileTab() === 'chat' ? 'max-lg:hidden' : ''"
+            class="min-w-0 xl:w-[clamp(340px,36%,440px)] max-xl:flex-1 shrink-0 overflow-y-auto overscroll-contain p-3 space-y-3 xl:border-l border-ink/10 bg-ink/[.02]"
+            [class]="mobileTab() === 'chat' ? 'max-xl:hidden' : ''"
             aria-label="Información de la consulta"
           >
             <!-- Cliente -->

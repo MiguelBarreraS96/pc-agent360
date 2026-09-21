@@ -1,17 +1,17 @@
-<main class="min-h-screen grid place-items-center p-4 sm:p-8" aria-labelledby="login-title">
+<main class="min-h-dvh grid place-items-center p-4 sm:p-8" aria-labelledby="login-title">
   <div class="w-full max-w-[420px]">
-    <div class="flex flex-col items-center mb-7 rise">
+    <div class="flex flex-col items-center mb-5 sm:mb-7 rise">
       <div
-        class="float-soft w-[62px] h-[62px] rounded-[20px] grid place-items-center mb-4"
+        class="float-soft w-14 h-14 sm:w-[62px] sm:h-[62px] rounded-[20px] grid place-items-center mb-3 sm:mb-4"
         style="background:linear-gradient(135deg,#00A94F,#00722f); box-shadow:0 18px 40px -14px rgba(0,169,79,.9), inset 0 1px 0 rgba(255,255,255,.25)"
       >
         <i class="bi bi-shield-shaded text-[26px]" style="color:#FFD100" aria-hidden="true"></i>
       </div>
-      <h1 class="text-[26px] font-extrabold tracking-tight">Seguros <span style="color:#B38F00">Bolívar</span></h1>
+      <h1 class="text-[22px] sm:text-[26px] font-extrabold tracking-tight">Seguros <span style="color:#B38F00">Bolívar</span></h1>
       <p class="text-sm text-ink/45 mt-1">Agente 360 · Acceso seguro</p>
     </div>
 
-    <section class="glass rounded-[28px] p-7 sm:p-8 rise" style="animation-delay:.12s" aria-label="Formulario de acceso">
+    <section class="glass rounded-[24px] sm:rounded-[28px] p-5 sm:p-8 rise" style="animation-delay:.12s" aria-label="Formulario de acceso">
       @if (linkRequested()) {
         <h2 id="login-title" class="text-lg font-bold">Revise su correo</h2>
         <p class="text-[13px] text-ink/45 mt-1 mb-6">
@@ -73,7 +73,7 @@
       </p>
     </section>
 
-    <p class="text-center text-[12px] text-ink/30 mt-6 rise" style="animation-delay:.2s">
+    <p class="text-center text-[12px] text-ink/30 mt-4 sm:mt-6 rise" style="animation-delay:.2s">
       Acceso sin contraseña · Firebase Email Link
     </p>
   </div>

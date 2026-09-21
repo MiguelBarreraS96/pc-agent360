@@ -116,6 +116,7 @@ const PITCH_READY_MESSAGE =
   selector: 'app-agent',
   imports: [ReactiveFormsModule],
   templateUrl: './agent.component.html',
+  host: { class: 'block h-full' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AgentComponent implements OnInit {

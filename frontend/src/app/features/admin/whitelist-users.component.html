@@ -12,15 +12,15 @@
 
   <div class="space-y-2">
     @for (user of users(); track user.id) {
-      <div class="row-in glass-soft rounded-[18px] p-3 flex items-center gap-3">
+      <div class="row-in glass-soft rounded-[18px] p-3 flex flex-wrap items-center gap-x-3 gap-y-2">
         <div
-          class="w-10 h-10 rounded-[13px] grid place-items-center text-[12.5px] font-bold shrink-0"
+          class="hidden sm:grid w-10 h-10 rounded-[13px] place-items-center text-[12.5px] font-bold shrink-0"
           style="background:linear-gradient(135deg, rgba(0,169,79,.16), rgba(255,209,0,.22)); color:#0E1A14"
           aria-hidden="true"
         >
           {{ user.email.charAt(0).toUpperCase() }}
         </div>
-        <div class="min-w-0 flex-1">
+        <div class="min-w-[10rem] flex-1">
           <p class="text-[13.5px] font-semibold truncate text-ink">{{ user.email }}</p>
           @if (user.displayName !== null) {
             <p class="text-[12px] text-ink/40 truncate">{{ user.displayName }}</p>
@@ -60,8 +60,8 @@
 
 <div class="modal" [class.open]="isModalOpen()">
   <div class="modal-bg" (click)="closeModal()"></div>
-  <div class="modal-card glass rounded-[28px] w-full max-w-[480px] overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="whitelist-modal-title">
-    <div class="flex items-center gap-3 px-6 py-5 border-b border-ink/10">
+  <div class="modal-card glass rounded-[28px] w-full max-w-[480px]" role="dialog" aria-modal="true" aria-labelledby="whitelist-modal-title">
+    <div class="flex items-center gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-ink/10">
       <div
         class="w-10 h-10 rounded-[14px] grid place-items-center"
         style="background:linear-gradient(135deg, rgba(255,209,0,.20), rgba(0,169,79,.12)); border:1px solid rgba(255,209,0,.35)"
@@ -79,7 +79,7 @@
       </button>
     </div>
 
-    <form class="p-6 space-y-4" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <form class="p-4 sm:p-6 space-y-4" [formGroup]="form" (ngSubmit)="save()" novalidate>
       <div>
         <label for="whitelist-email" class="block text-[12px] font-semibold text-ink/55 mb-2">Correo corporativo</label>
         <input id="whitelist-email" class="field field-plain" type="email" formControlName="email" autocomplete="off" maxlength="254">

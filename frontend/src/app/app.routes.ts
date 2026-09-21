@@ -34,17 +34,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/agent/agent.component').then((module) => module.AgentComponent),
       },
       {
-        path: 'consulta360',
-        title: 'Consulta Cliente 360 | Agente 360',
-        data: {
-          heading: 'Consulta Cliente 360',
-          subheading: 'Consulta información de clientes por documento',
-        },
-        canActivate: [permissionGuard('agent:read')],
-        loadComponent: () =>
-          import('./features/consulta360/consulta360').then((module) => module.Consulta360Component),
-      },
-      {
         path: 'correos-conectados',
         title: 'Correos conectados | Agente 360',
         data: { heading: 'Correos conectados', subheading: 'Administra las cuentas con acceso a la plataforma' },

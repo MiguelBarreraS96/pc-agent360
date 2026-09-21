@@ -1,7 +1,7 @@
 <div class="modal open">
   <div class="modal-bg" (click)="close()"></div>
-  <section class="modal-card glass rounded-[28px] w-full max-w-[720px] max-h-[92vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="product-rag-agent-title">
-    <header class="flex items-center gap-3 px-6 py-5 border-b border-ink/10">
+  <section class="modal-card glass rounded-[28px] w-full max-w-[720px]" role="dialog" aria-modal="true" aria-labelledby="product-rag-agent-title">
+    <header class="flex items-center gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-ink/10">
       <div
         class="w-10 h-10 rounded-[14px] grid place-items-center"
         style="background:linear-gradient(135deg, rgba(0,169,79,.14), rgba(255,209,0,.14)); border:1px solid rgba(0,169,79,.22)"
@@ -17,7 +17,7 @@
       </button>
     </header>
 
-    <div class="p-6 space-y-4">
+    <div class="p-4 sm:p-6 space-y-4">
       @if (product().rag.state !== 'active') {
         <div class="text-[12.5px] rounded-xl px-3 py-2.5 flex items-center gap-2" [style.background]="'rgba(255,209,0,.12)'" [style.color]="'#8a6d00'">
           <i class="bi bi-hourglass-split" aria-hidden="true"></i>

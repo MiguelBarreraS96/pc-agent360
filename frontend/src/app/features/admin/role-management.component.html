@@ -13,8 +13,8 @@
   <div class="space-y-2">
     @for (role of roles(); track role.id) {
       <div class="row-in glass-soft rounded-[18px] p-3.5">
-        <div class="flex items-center gap-3">
-          <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div class="min-w-[10rem] flex-1">
             <p class="text-[13.5px] font-semibold truncate text-ink">{{ role.name }}</p>
             <p class="text-[11.5px] text-ink/40 truncate font-mono">{{ role.key }}</p>
           </div>
@@ -68,8 +68,8 @@
 
 <div class="modal" [class.open]="isModalOpen()">
   <div class="modal-bg" (click)="closeModal()"></div>
-  <div class="modal-card glass rounded-[28px] w-full max-w-[560px] max-h-[92vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="role-modal-title">
-    <div class="flex items-center gap-3 px-6 py-5 border-b border-ink/10">
+  <div class="modal-card glass rounded-[28px] w-full max-w-[560px]" role="dialog" aria-modal="true" aria-labelledby="role-modal-title">
+    <div class="flex items-center gap-3 px-4 sm:px-6 py-4 sm:py-5 border-b border-ink/10">
       <div
         class="w-10 h-10 rounded-[14px] grid place-items-center"
         style="background:linear-gradient(135deg, rgba(0,169,79,.14), rgba(255,209,0,.14)); border:1px solid rgba(0,169,79,.22)"
@@ -85,7 +85,7 @@
       </button>
     </div>
 
-    <form class="p-6 space-y-4" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <form class="p-4 sm:p-6 space-y-4" [formGroup]="form" (ngSubmit)="save()" novalidate>
       @if (!isEditingProtectedRole()) {
         <div>
           <label for="role-key" class="block text-[12px] font-semibold text-ink/55 mb-2">Clave del rol</label>
