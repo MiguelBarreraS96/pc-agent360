@@ -1,16 +1,16 @@
-<section class="h-full min-h-[560px] grid place-items-center py-6" aria-label="Agente IA">
+<section class="h-full min-h-[560px] grid place-items-center py-6" aria-label="Asistente de ventas">
   <div class="relative">
     <div class="halo" aria-hidden="true"></div>
 
     <div class="agent-shell glass" [class.expanded]="stage() === 'chat'">
-      <!-- Intro: referencia local -->
+      <!-- Intro: cédula del cliente -->
       <div class="agent-pane grid place-items-center p-7" [class.show]="stage() === 'intro'" [class.hide]="stage() !== 'intro'">
         <div class="w-full max-w-[460px] text-center">
           <div class="flex justify-center mb-4">
             <div class="orb float-soft" aria-hidden="true"></div>
           </div>
           <h2 class="text-[19px] font-bold text-ink">Asistente Bolívar</h2>
-          <p class="text-[13px] text-ink/45 mt-1.5 mb-5">Ingresa una referencia de prueba para comenzar</p>
+          <p class="text-[13px] text-ink/45 mt-1.5 mb-5">Ingresa la cédula del cliente para preparar tu venta</p>
 
           <form class="relative" [formGroup]="citizenIdForm" (ngSubmit)="startConsultation()">
             <input
@@ -18,10 +18,10 @@
               class="field !rounded-full !py-4 !pl-12 !pr-[54px] text-center tracking-wider"
               inputmode="numeric"
               autocomplete="off"
-              maxlength="15"
+              maxlength="10"
               formControlName="citizenId"
               (input)="onCitizenIdInput($event)"
-              placeholder="Identificador de prueba"
+              placeholder="Cédula del cliente"
             >
             <i class="bi bi-person-vcard field-ico !left-5" aria-hidden="true"></i>
             <button
@@ -35,15 +35,15 @@
           </form>
 
           @if (citizenIdForm.controls.citizenId.touched && citizenIdForm.controls.citizenId.invalid) {
-            <p class="text-[12px] text-red-600 mt-3">Ingresa un identificador válido de prueba (mín. 6 dígitos).</p>
+            <p class="text-[12px] text-red-600 mt-3">Ingresa una cédula válida (6 a 10 dígitos).</p>
           }
-          <p class="text-[11.5px] text-ink/30 mt-3.5">Prueba local · la referencia no se envía a Gemini</p>
+          <p class="text-[11.5px] text-ink/30 mt-3.5">La cédula solo se usa para consultar Cliente 360; nunca se envía al modelo de IA</p>
         </div>
       </div>
 
-      <!-- Chat -->
+      <!-- Conversación: chat a la izquierda, tarjetas a la derecha -->
       <div class="agent-pane flex flex-col" [class.show]="stage() === 'chat'" [class.hide]="stage() !== 'chat'">
-        <div class="flex items-center gap-3 px-4 sm:px-5 py-3.5 border-b border-ink/10 shrink-0">
+        <div class="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-ink/10 shrink-0">
           <div
             class="w-9 h-9 rounded-full grid place-items-center shrink-0"
             style="background:linear-gradient(135deg,#00A94F,#FFD100); box-shadow:0 8px 18px -8px rgba(0,169,79,.9)"
@@ -56,11 +56,34 @@
               <span class="w-1.5 h-1.5 rounded-full bg-bolivar-500 animate-pulse"></span>
             </p>
             <p class="text-[11.5px] text-ink/40 truncate">
-              Prueba local · referencia <span class="text-ink/70">{{ citizenId() ? formatCitizenId(citizenId()!) : '—' }}</span>
+              Cliente · cédula <span class="text-ink/70">{{ citizenId() ? formatCitizenId(citizenId()!) : '—' }}</span>
+              @if (brief(); as current) {
+                · <span class="text-ink/70">{{ current.productName }}</span>
+              }
             </p>
           </div>
+
+          <div class="lg:hidden ml-auto flex rounded-full bg-ink/[.06] p-0.5 text-[12px]" role="tablist" aria-label="Vista">
+            <button
+              type="button"
+              role="tab"
+              class="rounded-full px-3 py-1.5 transition"
+              [class]="mobileTab() === 'chat' ? 'bg-white text-ink font-semibold shadow-sm' : 'text-ink/55'"
+              [attr.aria-selected]="mobileTab() === 'chat'"
+              (click)="setMobileTab('chat')"
+            >Chat</button>
+            <button
+              type="button"
+              role="tab"
+              class="rounded-full px-3 py-1.5 transition"
+              [class]="mobileTab() === 'panel' ? 'bg-white text-ink font-semibold shadow-sm' : 'text-ink/55'"
+              [attr.aria-selected]="mobileTab() === 'panel'"
+              (click)="setMobileTab('panel')"
+            >Tarjetas</button>
+          </div>
+
           <button
-            class="ml-auto btn-ghost px-3 py-2 text-[12px] flex items-center gap-1.5 shrink-0"
+            class="lg:ml-auto btn-ghost px-3 py-2 text-[12px] flex items-center gap-1.5 shrink-0"
             type="button"
             [disabled]="isTyping()"
             (click)="resetConsultation()"
@@ -69,72 +92,295 @@
           </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto px-4 sm:px-5 py-5 space-y-3.5" #chatBody [attr.aria-busy]="isTyping()">
-          @for (message of messages(); track message.id) {
-            @if (message.role === 'me') {
-              <div class="msg flex justify-end">
-                <div class="bubble-me max-w-[78%] px-4 py-2.5 text-[13.5px]">{{ message.text }}</div>
-              </div>
-            } @else {
-              <div class="msg flex justify-start">
-                <div class="flex gap-2.5 max-w-[86%]">
-                  <div class="w-7 h-7 rounded-full shrink-0 mt-0.5 grid place-items-center" style="background:linear-gradient(135deg,#00A94F,#FFD100)">
-                    <i class="bi bi-stars text-[12px]" style="color:#02150C" aria-hidden="true"></i>
+        <div class="flex-1 min-h-0 flex">
+          <!-- Chat -->
+          <div class="min-w-0 flex-1 flex flex-col" [class]="mobileTab() === 'panel' ? 'max-lg:hidden' : ''">
+            <div class="flex-1 overflow-y-auto px-4 sm:px-5 py-5 space-y-3.5" #chatBody [attr.aria-busy]="isTyping()">
+              @for (message of messages(); track message.id) {
+                @if (message.role === 'me') {
+                  <div class="msg flex justify-end">
+                    <div class="bubble-me max-w-[82%] px-4 py-2.5 text-[13.5px]">{{ message.text }}</div>
                   </div>
-                  <div class="bubble-bot px-4 py-3 text-[13.5px] leading-relaxed">{{ message.text }}</div>
+                } @else {
+                  <div class="msg flex justify-start">
+                    <div class="flex gap-2.5 max-w-[92%] min-w-0">
+                      <div class="w-7 h-7 rounded-full shrink-0 mt-0.5 grid place-items-center" style="background:linear-gradient(135deg,#00A94F,#FFD100)">
+                        <i class="bi bi-stars text-[12px]" style="color:#02150C" aria-hidden="true"></i>
+                      </div>
+                      <div class="bubble-bot px-4 py-3 text-[13.5px] leading-relaxed min-w-0">
+                        <p class="whitespace-pre-line">{{ message.text }}</p>
+                        @if (message.sources.length > 0) {
+                          <p class="text-[11px] text-ink/40 mt-1.5">Fuente: {{ message.sources.join(' · ') }}</p>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              }
+              @if (isTyping()) {
+                <div class="msg flex justify-start">
+                  <div class="flex gap-2.5">
+                    <div class="w-7 h-7 rounded-full shrink-0 mt-0.5 grid place-items-center" style="background:linear-gradient(135deg,#00A94F,#FFD100)">
+                      <i class="bi bi-stars text-[12px]" style="color:#02150C" aria-hidden="true"></i>
+                    </div>
+                    <div class="bubble-bot px-4 py-3.5 flex items-center gap-1.5">
+                      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            }
-          }
-          @if (isTyping()) {
-            <div class="msg flex justify-start">
-              <div class="flex gap-2.5">
-                <div class="w-7 h-7 rounded-full shrink-0 mt-0.5 grid place-items-center" style="background:linear-gradient(135deg,#00A94F,#FFD100)">
-                  <i class="bi bi-stars text-[12px]" style="color:#02150C" aria-hidden="true"></i>
-                </div>
-                <div class="bubble-bot px-4 py-3.5 flex items-center gap-1.5">
-                  <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-                </div>
-              </div>
+              }
             </div>
-          }
-        </div>
 
-        <div class="px-4 sm:px-5 pb-4 pt-2 shrink-0">
-          <div class="flex gap-2 overflow-x-auto pb-2.5 -mx-1 px-1">
-            @for (prompt of suggestedPrompts; track prompt) {
-              <button
-                type="button"
-                class="glass-soft whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] text-ink/70 hover:text-ink hover:bg-ink/[.06] transition"
-                [disabled]="isTyping()"
-                (click)="sendPrompt(prompt)"
-              >
-                {{ prompt }}
-              </button>
-            }
+            <div class="px-4 sm:px-5 pb-4 pt-2 shrink-0">
+              @if (hasSelectedProduct()) {
+                <div class="flex gap-2 overflow-x-auto pb-2.5 -mx-1 px-1" role="group" aria-label="Acciones rápidas">
+                  @for (group of fastActionGroups(); track group.group) {
+                    <span class="self-center text-[10.5px] font-bold uppercase tracking-wide text-ink/35 shrink-0">{{ group.label }}</span>
+                    @for (action of group.actions; track action.id) {
+                      <button
+                        type="button"
+                        class="glass-soft whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] text-ink/70 hover:text-ink hover:bg-ink/[.06] transition flex items-center gap-1.5"
+                        [disabled]="isTyping()"
+                        (click)="runFastAction(action)"
+                      >
+                        <i class="bi" [class]="action.icon" aria-hidden="true"></i>{{ action.label }}
+                      </button>
+                    }
+                  }
+                </div>
+              }
+              <form class="relative" [formGroup]="messageForm" (ngSubmit)="sendMessage()">
+                <input
+                  class="field !rounded-2xl !pl-4 !pr-[52px] !py-3.5 !text-[14px]"
+                  formControlName="text"
+                  autocomplete="off"
+                  maxlength="1000"
+                  [disabled]="isTyping() || !hasSelectedProduct()"
+                  [placeholder]="hasSelectedProduct() ? 'Pregunta por el producto o cómo abordar al cliente…' : 'Elige un producto para comenzar…'"
+                >
+                <button
+                  type="submit"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl grid place-items-center transition hover:scale-105 active:scale-95"
+                  style="background:linear-gradient(135deg,#00A94F,#0f9e4d); color:#02150C"
+                  [disabled]="isTyping() || !hasSelectedProduct()"
+                  aria-label="Enviar"
+                >
+                  <i class="bi bi-send-fill text-[13px]" aria-hidden="true"></i>
+                </button>
+              </form>
+              @if (messageForm.controls.text.touched && messageForm.controls.text.invalid) {
+                <p class="text-[11.5px] text-red-600 mt-2">Escribe una pregunta de máximo 1.000 caracteres.</p>
+              }
+            </div>
           </div>
-          <form class="relative" [formGroup]="messageForm" (ngSubmit)="sendMessage()">
-            <input
-              class="field !rounded-2xl !pl-4 !pr-[52px] !py-3.5 !text-[14px]"
-              formControlName="text"
-              autocomplete="off"
-              maxlength="1000"
-              [disabled]="isTyping()"
-              placeholder="Escribe una pregunta para Gemini..."
-            >
-            <button
-              type="submit"
-              class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-xl grid place-items-center transition hover:scale-105 active:scale-95"
-              style="background:linear-gradient(135deg,#00A94F,#0f9e4d); color:#02150C"
-              [disabled]="isTyping()"
-              aria-label="Enviar"
-            >
-              <i class="bi bi-send-fill text-[13px]" aria-hidden="true"></i>
-            </button>
-          </form>
-          @if (messageForm.controls.text.touched && messageForm.controls.text.invalid) {
-            <p class="text-[11.5px] text-red-600 mt-2">Escribe una pregunta de máximo 1.000 caracteres.</p>
-          }
+
+          <!-- Tarjetas -->
+          <aside
+            class="min-w-0 lg:w-[440px] max-lg:flex-1 shrink-0 overflow-y-auto p-3.5 space-y-3.5 lg:border-l border-ink/10 bg-ink/[.02]"
+            [class]="mobileTab() === 'chat' ? 'max-lg:hidden' : ''"
+            aria-label="Información de la consulta"
+          >
+            <!-- Cliente -->
+            <article class="rounded-2xl bg-white/85 border border-ink/[.07] p-4 shadow-[0_10px_24px_-20px_rgba(14,26,20,.6)]">
+              <h3 class="flex items-center gap-2 text-[13px] font-bold text-ink">
+                <i class="bi bi-person-lines-fill text-bolivar-500" aria-hidden="true"></i>Cliente
+              </h3>
+              @if (profile(); as client) {
+                <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-[12.5px]">
+                  <div>
+                    <dt class="text-[11px] text-ink/45">Edad</dt>
+                    <dd class="font-semibold text-ink">{{ client.edad ?? '—' }}<span class="font-normal text-ink/50"> · {{ ageLabel(client.ageSegment) }}</span></dd>
+                  </div>
+                  <div>
+                    <dt class="text-[11px] text-ink/45">Ciudad</dt>
+                    <dd class="font-semibold text-ink">{{ client.ciudad ?? '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-[11px] text-ink/45">Ingresos</dt>
+                    <dd class="font-semibold text-ink">{{ client.categoriaIngresos ?? '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-[11px] text-ink/45">Antigüedad</dt>
+                    <dd class="font-semibold text-ink">{{ client.antiguedad ?? '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-[11px] text-ink/45">Valor del cliente</dt>
+                    <dd class="font-semibold text-ink">{{ client.clv ?? '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-[11px] text-ink/45">Recomendado por 360</dt>
+                    <dd class="font-semibold text-ink">{{ client.productoRecomendado ?? '—' }}</dd>
+                  </div>
+                </dl>
+                <p class="mt-3.5 text-[11px] text-ink/45">Apto para</p>
+                <div class="mt-1.5 flex flex-wrap gap-1.5">
+                  @for (item of aptitudes(); track item.label) {
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium"
+                      [class]="item.apt === true ? 'bg-bolivar-500/[.12] text-bolivar-600' : 'bg-ink/[.05] text-ink/40'"
+                    >
+                      <i class="bi" [class]="item.apt === true ? 'bi-check-circle-fill' : item.apt === false ? 'bi-x-circle' : 'bi-dash-circle'" aria-hidden="true"></i>
+                      {{ item.label }}
+                    </span>
+                  }
+                </div>
+              } @else if (isTyping()) {
+                <p class="mt-3 text-[12.5px] text-ink/50">Consultando Cliente 360…</p>
+              } @else {
+                <p class="mt-3 text-[12.5px] text-ink/50">Sin información del cliente.</p>
+              }
+            </article>
+
+            <!-- Producto -->
+            <article class="rounded-2xl bg-white/85 border border-ink/[.07] p-4 shadow-[0_10px_24px_-20px_rgba(14,26,20,.6)]">
+              <div class="flex items-center gap-2">
+                <h3 class="flex items-center gap-2 text-[13px] font-bold text-ink">
+                  <i class="bi bi-shield-check text-bolivar-500" aria-hidden="true"></i>Producto
+                </h3>
+                @if (brief() !== null && !showProductPicker()) {
+                  <button
+                    type="button"
+                    class="ml-auto btn-ghost px-2.5 py-1 text-[11.5px]"
+                    [disabled]="isTyping()"
+                    (click)="showProductPicker.set(true)"
+                  >Cambiar producto</button>
+                }
+              </div>
+
+              @if (profile() === null) {
+                <p class="mt-3 text-[12.5px] text-ink/50">Aquí verás los productos que puedes ofrecerle.</p>
+              } @else {
+                @if (showProductPicker() || brief() === null) {
+                  @if (products().length === 0) {
+                    <p class="mt-3 text-[12.5px] text-ink/70">
+                      Cliente 360 encontró al cliente
+                      @if (aptitudes().length > 0) {
+                        y lo marca apto para
+                        @for (item of aptitudes(); track item.label) {
+                          @if (item.apt === true) {
+                            <b class="text-ink">{{ item.label.toLowerCase() }}</b>{{ ' ' }}
+                          }
+                        }
+                      }
+                      , pero ninguno de esos productos existe todavía en el catálogo. Créalo en Productos y carga su clausulado para poder ofrecérselo.
+                    </p>
+                  } @else {
+                    <p class="mt-2 text-[12px] text-ink/50">Elige uno para preparar la venta:</p>
+                    <div class="mt-2 grid gap-2">
+                      @for (product of products(); track product.id) {
+                        <button
+                          type="button"
+                          class="text-left rounded-xl border border-ink/10 bg-white px-3.5 py-2.5 transition hover:border-bolivar-500/50 hover:bg-bolivar-500/[.04] disabled:opacity-50 disabled:cursor-not-allowed"
+                          [disabled]="isTyping() || !product.clausuladoDisponible"
+                          (click)="chooseProduct(product)"
+                        >
+                          <span class="flex items-center gap-2 text-[13.5px] font-semibold text-ink">
+                            <i class="bi" [class]="product.icon" aria-hidden="true"></i>{{ product.name }}
+                            @if (product.recommended) {
+                              <span class="text-[10.5px] font-bold rounded-full px-2 py-0.5" style="background:#FFD100; color:#02150C">Recomendado</span>
+                            }
+                          </span>
+                          <span class="block text-[12px] text-ink/55 mt-0.5">
+                            {{ product.reason }}
+                            @if (!product.clausuladoDisponible) {
+                              · Aún sin clausulado cargado
+                            }
+                          </span>
+                        </button>
+                      }
+                    </div>
+                  }
+                  @if (isPreparing()) {
+                    <p class="mt-3 flex items-center gap-2 text-[12.5px] text-ink/60">
+                      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                      Leyendo el clausulado y preparando el resumen…
+                    </p>
+                  }
+                } @else if (brief(); as current) {
+                  <p class="mt-2 text-[15px] font-bold text-ink">{{ current.productName }}</p>
+                  <p class="text-[11.5px] text-ink/45">Datos verificados contra el clausulado. Abre “Ver cita” para ver el texto original.</p>
+
+                  <div class="mt-3 space-y-3.5">
+                    @for (group of factGroups(); track group.topic) {
+                      <section>
+                        <h4 class="text-[11px] font-bold uppercase tracking-wide text-bolivar-600">{{ group.label }}</h4>
+                        <ul class="mt-1.5 space-y-2 text-[13px] leading-snug text-ink">
+                          @for (fact of group.facts; track fact.id) {
+                            <li class="flex gap-2">
+                              <i class="bi bi-check2 text-bolivar-500 mt-0.5 shrink-0" aria-hidden="true"></i>
+                              <div class="min-w-0">
+                                <span>{{ fact.claim }}</span>
+                                <details class="mt-0.5">
+                                  <summary class="cursor-pointer text-[11.5px] text-ink/45">Ver cita · {{ fact.source }}</summary>
+                                  <blockquote class="mt-1 border-l-2 border-bolivar-500/50 pl-2.5 text-[12px] text-ink/60 italic">“{{ fact.quote }}”</blockquote>
+                                </details>
+                              </div>
+                            </li>
+                          }
+                        </ul>
+                      </section>
+                    }
+                  </div>
+                }
+              }
+            </article>
+
+            <!-- Guion sugerido -->
+            <article class="rounded-2xl bg-white/85 border border-ink/[.07] p-4 shadow-[0_10px_24px_-20px_rgba(14,26,20,.6)]">
+              <h3 class="flex items-center gap-2 text-[13px] font-bold text-ink">
+                <i class="bi bi-chat-square-text text-bolivar-500" aria-hidden="true"></i>Guion sugerido
+              </h3>
+              @if (brief(); as current) {
+                <p class="text-[11px] text-ink/40 mt-0.5">Redacción del asistente; los datos del producto salen solo de los hechos verificados.</p>
+
+                <div class="mt-3 space-y-3 text-[13px] leading-relaxed text-ink">
+                  <section>
+                    <h4 class="text-[11px] font-bold uppercase tracking-wide text-bolivar-600">1 · Cómo abrir</h4>
+                    <p class="mt-1">{{ current.script.apertura }}</p>
+                  </section>
+                  <section>
+                    <h4 class="text-[11px] font-bold uppercase tracking-wide text-bolivar-600">2 · Cómo presentarlo</h4>
+                    <p class="mt-1">{{ current.script.propuestaDeValor }}</p>
+                    @if (current.script.puntosClave.length > 0) {
+                      <ul class="mt-1.5 list-disc pl-5 space-y-1">
+                        @for (point of current.script.puntosClave; track point.text) {
+                          <li>{{ point.text }} <span class="text-[11px] text-ink/40">({{ point.factIds.join(', ') }})</span></li>
+                        }
+                      </ul>
+                    }
+                  </section>
+                  @if (current.script.preguntasDescubrimiento.length > 0) {
+                    <section>
+                      <h4 class="text-[11px] font-bold uppercase tracking-wide text-bolivar-600">3 · Preguntas para conocerlo</h4>
+                      <ul class="mt-1 list-disc pl-5 space-y-1">
+                        @for (question of current.script.preguntasDescubrimiento; track question) {
+                          <li>{{ question }}</li>
+                        }
+                      </ul>
+                    </section>
+                  }
+                  @if (current.script.advertencias.length > 0) {
+                    <section class="rounded-xl bg-amber-50 border border-amber-200/70 px-3 py-2.5">
+                      <h4 class="text-[11px] font-bold uppercase tracking-wide text-amber-700">Sé transparente sobre</h4>
+                      <ul class="mt-1 list-disc pl-5 space-y-1">
+                        @for (warning of current.script.advertencias; track warning) {
+                          <li>{{ warning }}</li>
+                        }
+                      </ul>
+                    </section>
+                  }
+                  <section>
+                    <h4 class="text-[11px] font-bold uppercase tracking-wide text-bolivar-600">4 · Cómo cerrar</h4>
+                    <p class="mt-1">{{ current.script.cierre }}</p>
+                  </section>
+                </div>
+              } @else if (isPreparing()) {
+                <p class="mt-3 text-[12.5px] text-ink/50">Preparando el guion…</p>
+              } @else {
+                <p class="mt-3 text-[12.5px] text-ink/50">Aparecerá cuando elijas un producto.</p>
+              }
+            </article>
+          </aside>
         </div>
       </div>
     </div>

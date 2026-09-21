@@ -1,4 +1,6 @@
 # Changelog
+- Se implementó el agente de ventas con LangGraph (`/api/v1/agent`): consulta Cliente 360 por cédula, sugiere productos del catálogo, arma un resumen y un guion de venta según edad y perfil, y atiende preguntas y acciones rápidas durante la llamada. Todo dato del producto proviene del clausulado: cada hecho se acepta solo si su cita literal existe en la evidencia recuperada y las cifras del guion deben figurar en ella.
+- Se reemplazó la interfaz de prueba del Agente IA por el flujo real: cédula, perfil y productos sugeridos, resumen verificado con citas, guion, chat y acciones rápidas (objeciones, problemas de llamada y preguntas frecuentes del producto).
 
 Todos los cambios notables de este proyecto se documentan en este archivo.
 

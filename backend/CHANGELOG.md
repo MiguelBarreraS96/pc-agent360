@@ -1,4 +1,5 @@
 # Changelog
+- Se implementó el agente de ventas con LangGraph (`/api/v1/agent`): consulta Cliente 360 por cédula, sugiere productos del catálogo, arma un resumen y un guion de venta según edad y perfil, y atiende preguntas y acciones rápidas durante la llamada. Todo dato del producto proviene del clausulado: cada hecho se acepta solo si su cita literal existe en la evidencia recuperada y las cifras del guion deben figurar en ella.
 
 Todos los cambios notables de este servicio se documentan en este archivo.
 

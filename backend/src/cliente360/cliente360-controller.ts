@@ -68,7 +68,7 @@ const TIMEOUT_MESSAGE = "La consulta tardó demasiado en responder.";
 const VALIDATION_MESSAGE = "El cuerpo de la solicitud no es válido.";
 
 /** Mapeo de estado HTTP y mensaje genérico por cada código de error controlado. */
-interface MappedError {
+export interface MappedError {
   readonly status: number;
   readonly message: string;
 }
@@ -80,7 +80,7 @@ interface MappedError {
  * @param code código de error controlado propagado por la orquestación.
  * @returns el estado y mensaje a responder, o `null` si el código no es reconocido.
  */
-function mapControlledError(code: string): MappedError | null {
+export function mapControlledError(code: string): MappedError | null {
   switch (code) {
     case AUTH_UPSTREAM_FAILED_CODE:
     case UPSTREAM_ERROR:
@@ -101,7 +101,7 @@ function mapControlledError(code: string): MappedError | null {
  * @param error error capturado durante la orquestación.
  * @returns el `code` si existe y es string; en otro caso `null`.
  */
-function extractErrorCode(error: unknown): string | null {
+export function extractErrorCode(error: unknown): string | null {
   if (
     error !== null &&
     typeof error === "object" &&

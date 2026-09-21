@@ -1,5 +1,9 @@
 import type { Firestore } from "firebase-admin/firestore";
 
+import { GeminiAgentLlm } from "./agent/agent-llm";
+import { AgentSessionRepository } from "./agent/agent-session.repository";
+import { createAgentGraph } from "./agent/agent.graph";
+import { AgentService } from "./agent/agent.service";
 import { createAdministratorMiddleware, createPermissionMiddleware } from "./access/permission.middleware";
 import { RoleRepository } from "./access/role.repository";
 import { RoleService } from "./access/role.service";
@@ -14,6 +18,7 @@ import { ChatService } from "./chat/chat.service";
 import { createGeminiClient } from "./chat/gemini.client";
 import { GeminiGateway } from "./chat/gemini.gateway";
 import type { AppConfig } from "./config";
+import { cliente360Service } from "./cliente360/cliente360-service";
 import { createRateLimitMiddleware } from "./middleware/rate-limit";
 import { ProductDocumentRepository } from "./products/product-document.repository";
 import { ProductDocumentsService } from "./products/product-documents.service";
@@ -31,6 +36,7 @@ const SESSION_RATE_LIMIT_WINDOW_MILLISECONDS = 60 * 1_000;
 const SESSION_RATE_LIMIT_MAX_REQUESTS = 120;
 
 export interface ApplicationDependencies {
+  readonly agentService: AgentService;
   readonly authenticate: import("express").RequestHandler;
   readonly authService: AuthService;
   readonly chatService: ChatService;
@@ -101,8 +107,21 @@ export function createApplicationDependencies(config: AppConfig, firestore: Fire
   const geminiGateway = new GeminiGateway(geminiClient, config.gemini.model);
   const productRagAgentService = new ProductRagAgentService(productsService, geminiGateway);
   const chatService = new ChatService(productsService, discoveryEngineGateway, geminiGateway);
+  const agentService = new AgentService(
+    createAgentGraph({
+      catalog: productsService,
+      clausulado: discoveryEngineGateway,
+      cliente360: {
+        consultar: (numeroDocumento, correlationId) =>
+          cliente360Service.consultarCliente({ numeroDocumento, tipoDocumento: "CC" }, correlationId),
+      },
+      llm: new GeminiAgentLlm(geminiClient, config.gemini.model),
+    }),
+    new AgentSessionRepository(firestore),
+  );
 
   return {
+    agentService,
     authenticate: createAuthenticationMiddleware(authService, config.session),
     authService,
     chatService,

@@ -2,6 +2,7 @@ import cors, { type CorsOptions } from "cors";
 import express, { type Express, type RequestHandler } from "express";
 import helmet from "helmet";
 
+import { createAgentRouter } from "./agent/agent.router";
 import { createRolesRouter } from "./access/roles.router";
 import { createUsersRouter } from "./access/users.router";
 import { createAuthRouter } from "./auth/auth.router";
@@ -115,6 +116,16 @@ export function createApp(dependencies: ApplicationDependencies): Express {
     createChatRouter({
       authenticate: dependencies.authenticate,
       chatService: dependencies.chatService,
+      requireAgentRead: dependencies.requireAgentRead,
+      requireCsrf: dependencies.requireCsrf,
+    }),
+  );
+  app.use(
+    "/api/v1/agent",
+    createAgentRouter({
+      agentService: dependencies.agentService,
+      authenticate: dependencies.authenticate,
+      rateLimitSession: dependencies.rateLimitSession,
       requireAgentRead: dependencies.requireAgentRead,
       requireCsrf: dependencies.requireCsrf,
     }),

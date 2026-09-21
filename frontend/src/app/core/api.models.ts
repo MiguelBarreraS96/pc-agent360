@@ -167,6 +167,80 @@ export interface GeminiPreviewResponse {
   readonly answer: string;
 }
 
+export type AgeSegment = 'joven' | 'adulto_joven' | 'adulto' | 'adulto_mayor' | 'senior' | 'desconocido';
+
+/** Lead attributes derived from Cliente 360; the document number and phones are never included. */
+export interface AgentProfileDto {
+  readonly aptitudes: Readonly<Record<'autos' | 'hogar' | 'salud' | 'vida', boolean | null>>;
+  readonly ageSegment: AgeSegment;
+  readonly antiguedad: number | null;
+  readonly categoriaIngresos: string | null;
+  readonly ciudad: string | null;
+  readonly clv: string | null;
+  readonly edad: number | null;
+  readonly productoRecomendado: string | null;
+}
+
+export interface AgentProductDto {
+  readonly clausuladoDisponible: boolean;
+  readonly icon: string;
+  readonly id: string;
+  readonly name: string;
+  readonly reason: string;
+  readonly recommended: boolean;
+}
+
+/** A statement about the product that was verified against a literal quote of the clausulado. */
+export interface AgentFactDto {
+  readonly claim: string;
+  readonly id: string;
+  readonly quote: string;
+  readonly source: string;
+  readonly topic: string;
+}
+
+export interface AgentScriptDto {
+  readonly advertencias: readonly string[];
+  readonly apertura: string;
+  readonly cierre: string;
+  readonly preguntasDescubrimiento: readonly string[];
+  readonly propuestaDeValor: string;
+  readonly puntosClave: readonly { readonly factIds: readonly string[]; readonly text: string }[];
+}
+
+export interface AgentBriefDto {
+  readonly facts: readonly AgentFactDto[];
+  readonly productId: string;
+  readonly productName: string;
+  readonly script: AgentScriptDto;
+}
+
+export type AgentOutputDto =
+  | { readonly kind: 'not_found' }
+  | { readonly kind: 'products'; readonly profile: AgentProfileDto; readonly products: readonly AgentProductDto[] }
+  | { readonly kind: 'pitch'; readonly brief: AgentBriefDto }
+  | {
+      readonly kind: 'answer';
+      readonly grounded: boolean;
+      readonly sources: readonly { readonly title: string }[];
+      readonly text: string;
+    }
+  | { readonly kind: 'no_clausulado' | 'invalid_request' | 'unavailable'; readonly text: string };
+
+export interface AgentTurnResponse {
+  readonly output: AgentOutputDto;
+  readonly sessionId: string | null;
+}
+
+export type FastActionGroup = 'producto' | 'objeciones' | 'llamada';
+
+export interface FastActionDto {
+  readonly group: FastActionGroup;
+  readonly icon: string;
+  readonly id: string;
+  readonly label: string;
+}
+
 export interface ApiErrorResponse {
   readonly correlationId: string;
   readonly error: {
