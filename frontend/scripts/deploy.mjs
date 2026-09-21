@@ -85,44 +85,47 @@ function validateInactivityTimeout(value) {
   }
 }
 
+/** Invoke gcloud, working around Windows CreateProcess being unable to exec .cmd/.bat files without a shell. */
+function runGcloud(args) {
+  const isWindows = process.platform === 'win32';
+  const escapedArgs = isWindows ? args.map((arg) => `"${arg.replace(/"/g, '\\"')}"`) : args;
+  return spawnSync('gcloud', escapedArgs, { stdio: 'inherit', shell: isWindows });
+}
+
 /** Execute Cloud Run deployment only after public runtime configuration validates. */
 function deploy(config) {
   const environmentValues = REQUIRED_VARIABLES.map((name) => `${name}=${config[name]}`).join(',');
-  const result = spawnSync(
-    'gcloud',
-    [
-      'run',
-      'deploy',
-      SERVICE_NAME,
-      '--source',
-      '.',
-      '--project',
-      PROJECT_ID,
-      '--region',
-      REGION,
-      '--port',
-      '8080',
-      '--allow-unauthenticated',
-      '--ingress',
-      'all',
-      '--cpu',
-      '1',
-      '--memory',
-      '256Mi',
-      '--timeout',
-      '15s',
-      '--concurrency',
-      '80',
-      '--min-instances',
-      '0',
-      '--max-instances',
-      '2',
-      '--set-env-vars',
-      environmentValues,
-      '--quiet',
-    ],
-    { stdio: 'inherit' },
-  );
+  const result = runGcloud([
+    'run',
+    'deploy',
+    SERVICE_NAME,
+    '--source',
+    '.',
+    '--project',
+    PROJECT_ID,
+    '--region',
+    REGION,
+    '--port',
+    '8080',
+    '--allow-unauthenticated',
+    '--ingress',
+    'all',
+    '--cpu',
+    '1',
+    '--memory',
+    '256Mi',
+    '--timeout',
+    '15s',
+    '--concurrency',
+    '80',
+    '--min-instances',
+    '0',
+    '--max-instances',
+    '2',
+    '--set-env-vars',
+    environmentValues,
+    '--quiet',
+  ]);
 
   if (result.error) {
     throw result.error;

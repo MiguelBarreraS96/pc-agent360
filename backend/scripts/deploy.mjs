@@ -10,6 +10,7 @@ const CONECTA_SECRET_REFERENCES = [
 ];
 const REQUIRED_VARIABLES = [
   'FIREBASE_PROJECT_ID',
+  'FIRESTORE_DATABASE_ID',
   'SESSION_COOKIE_SAME_SITE',
   'SESSION_INACTIVITY_TIMEOUT_SECONDS',
   'RAG_BUCKET_NAME',
@@ -28,6 +29,7 @@ function readDeploymentConfig(environment) {
   const corsAllowedOrigins = readCorsAllowedOrigins(environment);
 
   validateFirebaseProjectId(values.FIREBASE_PROJECT_ID);
+  validateFirestoreDatabaseId(values.FIRESTORE_DATABASE_ID);
   validateSameSite(values.SESSION_COOKIE_SAME_SITE);
   validateInactivityTimeout(values.SESSION_INACTIVITY_TIMEOUT_SECONDS);
   validateGcsBucketName(values.RAG_BUCKET_NAME);
@@ -103,6 +105,13 @@ function validateFirebaseProjectId(value) {
   }
 }
 
+/** Validate the Firestore database identifier so deployments never fall back to the unused "(default)" database. */
+function validateFirestoreDatabaseId(value) {
+  if (!/^(\(default\)|[a-z0-9][a-z0-9-]{2,61}[a-z0-9])$/.test(value)) {
+    throw new Error('FIRESTORE_DATABASE_ID is invalid.');
+  }
+}
+
 /** Force an explicit cookie policy instead of silently choosing a cross-origin behavior. */
 function validateSameSite(value) {
   if (!['lax', 'none', 'strict'].includes(value)) {
@@ -157,6 +166,13 @@ function validateGeminiLocation(value) {
   }
 }
 
+/** Invoke gcloud, working around Windows CreateProcess being unable to exec .cmd/.bat files without a shell. */
+function runGcloud(args) {
+  const isWindows = process.platform === 'win32';
+  const escapedArgs = isWindows ? args.map((arg) => `"${arg.replace(/"/g, '\\"')}"`) : args;
+  return spawnSync('gcloud', escapedArgs, { stdio: 'inherit', shell: isWindows });
+}
+
 /** Deploy only after all non-secret configuration and secret references validate. */
 function deploy(config) {
   const environmentValues = [
@@ -164,6 +180,7 @@ function deploy(config) {
     'HOST=0.0.0.0',
     `CORS_ALLOWED_ORIGINS=${config.CORS_ALLOWED_ORIGINS}`,
     `FIREBASE_PROJECT_ID=${config.FIREBASE_PROJECT_ID}`,
+    `FIRESTORE_DATABASE_ID=${config.FIRESTORE_DATABASE_ID}`,
     `SESSION_COOKIE_SAME_SITE=${config.SESSION_COOKIE_SAME_SITE}`,
     `SESSION_INACTIVITY_TIMEOUT_SECONDS=${config.SESSION_INACTIVITY_TIMEOUT_SECONDS}`,
     `RAG_BUCKET_NAME=${config.RAG_BUCKET_NAME}`,
@@ -174,8 +191,7 @@ function deploy(config) {
     `CONECTA_TOKEN_URL=${config.CONECTA_TOKEN_URL}`,
     `CONECTA_GRAPHQL_URL=${config.CONECTA_GRAPHQL_URL}`,
   ].join(',');
-  const result = spawnSync(
-    'gcloud',
+  const result = runGcloud(
     [
       'run',
       'deploy',
@@ -209,7 +225,6 @@ function deploy(config) {
       CONECTA_SECRET_REFERENCES.join(','),
       '--quiet',
     ],
-    { stdio: 'inherit' },
   );
 
   if (result.error) {
