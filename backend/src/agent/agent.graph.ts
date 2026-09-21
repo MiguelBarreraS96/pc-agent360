@@ -14,6 +14,7 @@ import {
   type AgentInput,
   type AgentOutput,
   type AgentTurn,
+  type ClienteDisplay,
   type ProductBrief,
   type SalesScript,
   type VerifiedFact,
@@ -35,7 +36,7 @@ import {
   scriptPrompt,
   scriptSystem,
 } from "./prompts";
-import { buildProfile, describeProfile, resolveEligibleProducts } from "./profile";
+import { buildDisplay, buildProfile, describeProfile, resolveEligibleProducts } from "./profile";
 
 const MAX_HISTORY_TURNS = 12;
 const MAX_TURN_CHARACTERS = 2_000;
@@ -104,6 +105,7 @@ type Intent = z.infer<typeof intentSchema>["intent"];
 const AgentState = Annotation.Root({
   context: Annotation<AgentContext>(),
   correlationId: Annotation<string>(),
+  display: Annotation<ClienteDisplay | null>(),
   evidence: Annotation<readonly EvidenceEntry[]>(),
   facts: Annotation<readonly VerifiedFact[]>(),
   input: Annotation<AgentInput>(),
@@ -183,7 +185,10 @@ export function createAgentGraph(deps: AgentGraphDependencies) {
         return { output: { kind: "not_found" } };
       }
 
-      return { context: { ...EMPTY_AGENT_CONTEXT, profile: buildProfile(result.cliente) } };
+      return {
+        context: { ...EMPTY_AGENT_CONTEXT, profile: buildProfile(result.cliente) },
+        display: buildDisplay(result.cliente),
+      };
     })
 
     .addNode("resolverProductos", async (state): Promise<Update> => {
@@ -195,7 +200,12 @@ export function createAgentGraph(deps: AgentGraphDependencies) {
       const products = resolveEligibleProducts(profile, await deps.catalog.listProducts());
       return {
         context: { ...state.context, eligibleProducts: products },
-        output: { kind: "products", products, profile },
+        output: {
+          client: state.display ?? { nombreCompleto: null, segmentoBanco: null },
+          kind: "products",
+          products,
+          profile,
+        },
       };
     })
 

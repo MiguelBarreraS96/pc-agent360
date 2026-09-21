@@ -90,6 +90,7 @@ export class AgentService {
       const state = await this.graph.invoke({
         context,
         correlationId,
+        display: null,
         evidence: [],
         facts: [],
         input,

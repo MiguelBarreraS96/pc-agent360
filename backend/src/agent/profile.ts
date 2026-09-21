@@ -1,10 +1,11 @@
-import type { ClienteResponseDTO } from "../cliente360/cliente360-dto";
+import type { ClienteResponseDTO, InmuebleDTO, VehiculoDTO } from "../cliente360/cliente360-dto";
 import type { Product } from "../products/products.models";
 
 import {
   PRODUCT_CATEGORIES,
   type AgeSegment,
   type AptitudeFlags,
+  type ClienteDisplay,
   type ClienteProfile,
   type EligibleProduct,
   type ProductCategory,
@@ -89,15 +90,34 @@ export function buildProfile(cliente: ClienteResponseDTO): ClienteProfile {
   };
 
   return {
+    actividadEconomica: cliente.actividadEconomica,
     aptitudes,
     ageSegment: resolveAgeSegment(edad),
     antiguedad: cliente.cliente360.antiguedad,
     categoriaIngresos: cliente.cliente360.categoriaIngresos,
-    ciudad: cliente.cliente360.ciudad,
+    ciudad: cliente.cliente360.ciudad ?? cliente.demografica.municipio,
     clv: cliente.cliente360.clv,
+    departamento: cliente.cliente360.departamento ?? cliente.demografica.departamento,
     edad,
+    estadoCliente: cliente.estadoCliente,
+    hogaresAsegurados: cliente.riesgosHogar,
+    inmuebles: cliente.inmuebles,
+    ocupacion: cliente.cliente360.ocupacion,
+    planesSugeridos: cliente.cliente360.planesSugeridos,
     productoRecomendado: cliente.cliente360.productoRecomendado,
+    productosActuales: cliente.cliente360.productosActuales,
+    productosSugeridos: cliente.cliente360.productosSugeridos,
+    profesion: cliente.profesion,
+    sectorEconomico: cliente.cliente360.sectorEconomico,
+    siniestros: cliente.siniestros,
+    tipoPersona: cliente.tipoPersona,
+    vehiculos: cliente.vehiculos,
   };
+}
+
+/** Identity data for the advisor's screen only. */
+export function buildDisplay(cliente: ClienteResponseDTO): ClienteDisplay {
+  return { nombreCompleto: cliente.nombreCompleto, segmentoBanco: cliente.segmentoBanco };
 }
 
 /** Find the aptitude category a product name belongs to, when its name carries one. */
@@ -152,16 +172,42 @@ export function resolveEligibleProducts(
   return eligible.sort((left, right) => Number(right.recommended) - Number(left.recommended));
 }
 
+const list = (items: readonly string[]): string => (items.length === 0 ? "ninguno registrado" : items.join(", "));
+
+function describeVehicle(vehicle: VehiculoDTO): string {
+  const name = [vehicle.marca, vehicle.linea, vehicle.modelo].filter((part) => part !== null && part !== "").join(" ");
+  const traits = [vehicle.tipo, vehicle.uso].filter((part) => part !== null && part !== "").join(", ");
+  return traits === "" ? name : `${name} (${traits})`;
+}
+
+function describeProperty(property: InmuebleDTO): string {
+  const parts = [property.tipoInmueble, property.ciudad, property.estrato === null ? null : `estrato ${property.estrato}`];
+  return parts.filter((part) => part !== null && part !== "").join(", ");
+}
+
 /** Render the profile as prompt text: attributes only, with unknowns stated instead of guessed. */
 export function describeProfile(profile: ClienteProfile): string {
   const value = (raw: number | string | null): string => (raw === null ? "no disponible" : String(raw));
+  const plans = PRODUCT_CATEGORIES.flatMap((category) => {
+    const plan = profile.planesSugeridos[category];
+    return plan === null ? [] : [`${category}: ${plan}`];
+  });
+
   return [
     `- Edad: ${value(profile.edad)} (segmento: ${profile.ageSegment})`,
-    `- Ciudad: ${value(profile.ciudad)}`,
+    `- Ciudad: ${value(profile.ciudad)}, ${value(profile.departamento)}`,
+    `- Tipo de persona y estado: ${value(profile.tipoPersona)}, ${value(profile.estadoCliente)}`,
+    `- Ocupación: ${value(profile.ocupacion)}; profesión: ${value(profile.profesion)}; actividad económica: ${value(profile.actividadEconomica)}`,
     `- Categoría de ingresos: ${value(profile.categoriaIngresos)}`,
     `- Antigüedad como cliente (valor tal cual lo reporta Cliente 360, unidad no especificada): ${value(profile.antiguedad)}`,
     `- Valor del cliente (CLV): ${value(profile.clv)}`,
+    `- Productos que ya tiene con el grupo: ${list(profile.productosActuales)}`,
     `- Producto recomendado por Cliente 360: ${value(profile.productoRecomendado)}`,
+    `- Próximos productos sugeridos por Cliente 360, en orden de prioridad: ${list(profile.productosSugeridos)}`,
+    `- Plan sugerido por Cliente 360 según el ramo: ${list(plans)}`,
+    `- Vehículos registrados en Conecta: ${list(profile.vehiculos.map(describeVehicle))}`,
+    `- Inmuebles registrados en Conecta: ${list(profile.inmuebles.map(describeProperty))}; riesgos de hogar registrados: ${profile.hogaresAsegurados}`,
+    `- Siniestros registrados: ${profile.siniestros}`,
     `- Guía de tono según edad: ${toneHintFor(profile.ageSegment)}`,
   ].join("\n");
 }

@@ -9,7 +9,7 @@
  */
 
 import type { ConectaClienteData } from "./conecta-types";
-import type { CelularDTO, ClienteResponseDTO } from "./cliente360-dto";
+import type { CelularDTO, ClienteResponseDTO, InmuebleDTO, VehiculoDTO } from "./cliente360-dto";
 
 /** Carácter fijo usado para sustituir los dígitos/caracteres ocultos (Req 6.1, 6.3). */
 const MASK_CHAR = "*";
@@ -72,6 +72,64 @@ function toCelularDTO(
   };
 }
 
+/** Valor con el que Cliente 360 marca un producto sugerido que no aplica al cliente. */
+const NO_APTO = "no apto";
+
+/**
+ * Interpreta un texto que Conecta entrega como lista JSON (p. ej. `["DEUDORES","ARL"]`).
+ * Cualquier valor que no sea una lista de textos produce una lista vacía.
+ */
+function parseTextList(value: string | null | undefined): string[] {
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string" && item.trim() !== "")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Vehículos únicos por marca, línea y modelo: Conecta repite el mismo bien por cada proceso de póliza. */
+function toVehiculosDTO(data: ConectaClienteData): VehiculoDTO[] {
+  const seen = new Set<string>();
+  const vehiculos: VehiculoDTO[] = [];
+
+  for (const { vehiculo } of data.vehiculos ?? []) {
+    if (vehiculo === null) {
+      continue;
+    }
+
+    const key = [vehiculo.marca, vehiculo.linea, vehiculo.modelo].join("|").toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    vehiculos.push({
+      linea: vehiculo.linea,
+      marca: vehiculo.marca,
+      modelo: vehiculo.modelo,
+      tipo: vehiculo.tipo,
+      uso: vehiculo.uso,
+    });
+  }
+
+  return vehiculos;
+}
+
+function toInmueblesDTO(data: ConectaClienteData): InmuebleDTO[] {
+  return (data.inmuebles ?? []).map((inmueble) => ({
+    ciudad: inmueble.ciudad,
+    estrato: inmueble.estrato,
+    tipoInmueble: inmueble.tipoInmueble,
+  }));
+}
+
 /**
  * Transforma los datos crudos de Conecta al DTO allowlist estricto expuesto al
  * frontend, enmascarando los números de celular y descartando cualquier campo no
@@ -91,9 +149,33 @@ export function toClienteResponseDTO(data: ConectaClienteData): ClienteResponseD
     .map(toCelularDTO)
     .filter((celular): celular is CelularDTO => celular !== null);
 
+  const cliente360 = data.cliente360;
+  const productosSugeridos = [
+    cliente360?.primerProducto,
+    cliente360?.segundoProducto,
+    cliente360?.tercerProducto,
+    cliente360?.cuartoProducto,
+    cliente360?.quintoProducto,
+  ].filter(
+    (producto): producto is string =>
+      typeof producto === "string" && producto.trim() !== "" && producto.trim().toLowerCase() !== NO_APTO,
+  );
+
   return {
+    nombreCompleto: data.nombreCompleto ?? null,
+    tipoPersona: data.tipoPersona ?? null,
+    estadoCliente: data.estadoCliente ?? null,
+    segmentoBanco: data.segmentoBanco ?? null,
+    profesion: data.profesion ?? null,
+    actividadEconomica: data.actividadEconomicaSbolivar ?? null,
+    vehiculos: toVehiculosDTO(data),
+    inmuebles: toInmueblesDTO(data),
+    riesgosHogar: data.riesgosHogar?.length ?? 0,
+    siniestros: data.siniestros?.length ?? 0,
     demografica: {
       edad: data.demografica?.edad ?? null,
+      departamento: data.demografica?.departamento ?? null,
+      municipio: data.demografica?.municipio ?? null,
     },
     contacto: {
       mejorCelular: toCelularDTO(data.contacto?.mejorCelular ?? null),
@@ -109,6 +191,19 @@ export function toClienteResponseDTO(data: ConectaClienteData): ClienteResponseD
       aptoHogar: data.cliente360?.aptoHogar ?? null,
       aptoSalud: data.cliente360?.aptoSalud ?? null,
       aptoVida: data.cliente360?.aptoVida ?? null,
+      departamento: cliente360?.departamento ?? null,
+      ocupacion: cliente360?.ocupacion ?? null,
+      sectorEconomico: cliente360?.sectorEconomico ?? null,
+      subsectorEconomico: cliente360?.subsectorEconomico ?? null,
+      cantidadProductos: cliente360?.cantidadProductos ?? null,
+      productosActuales: parseTextList(cliente360?.productos),
+      productosSugeridos,
+      planesSugeridos: {
+        autos: cliente360?.productoAutos ?? null,
+        hogar: cliente360?.productoHogar ?? null,
+        salud: cliente360?.productoSalud ?? null,
+        vida: cliente360?.productoVida ?? null,
+      },
     },
     valorIngresos: data.valorIngresos ?? null,
   };

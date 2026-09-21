@@ -10,6 +10,7 @@ y este proyecto adhiere a [Versionamiento Semántico](https://semver.org/lang/es
 ## [No publicado]
 
 ### Agregado
+- Se amplió la consulta a Cliente 360 con nombre, tipo y estado del cliente, ocupación, ubicación, productos que ya tiene, próximos productos y plan sugeridos por Conecta, vehículos, inmuebles y siniestros. El nombre solo se muestra al asesor y reemplaza los marcadores `[Nombre del Lead]` y `[Nombre del Asesor]` del guion en el navegador: no se guarda ni se envía a Gemini, igual que documento, teléfonos, correos, placas y pólizas.
 - Se implementó autenticación con Firebase Email Link, sesiones opacas de una hora, cierre por inactividad y validación de tokens en el backend.
 - Se agregaron CRUD de usuarios autorizados y roles con permisos, migración PostgreSQL, contrato OpenAPI y colección Postman.
 - Se creó la interfaz Angular con Tailwind, Bootstrap Icons, navegación por permisos, Agente IA, whitelist de correos y Productos administrativo.

@@ -12,8 +12,12 @@ import {
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { AgentApiService } from '../../core/agent-api.service';
+import { SessionStateService } from '../../core/session-state.service';
 import type {
   AgentBriefDto,
+  AgentClientDto,
+  AgentPropertyDto,
+  AgentVehicleDto,
   AgentFactDto,
   AgentOutputDto,
   AgentProductDto,
@@ -81,6 +85,24 @@ const FACT_TOPIC_LABELS: Readonly<Record<string, string>> = {
   vigencia: 'Vigencia',
 };
 
+const LEAD_PLACEHOLDER = /\[\s*nombre del (?:lead|cliente)\s*\]/gi;
+const ADVISOR_PLACEHOLDER = /\[\s*nombre del asesor\s*\]/gi;
+const LOWERCASE_NAME_PARTS: ReadonlySet<string> = new Set(['de', 'del', 'la', 'las', 'los', 'y']);
+
+/** "MARIA DE LA LUZ" -> "Maria de la Luz"; anything empty becomes null. */
+function toTitleCase(value: string | null | undefined): string | null {
+  const words = (value ?? '').toLocaleLowerCase('es').split(/\s+/).filter((word) => word !== '');
+  if (words.length === 0) {
+    return null;
+  }
+
+  return words
+    .map((word, index) =>
+      index > 0 && LOWERCASE_NAME_PARTS.has(word) ? word : word.charAt(0).toLocaleUpperCase('es') + word.slice(1),
+    )
+    .join(' ');
+}
+
 const NOT_FOUND_MESSAGE = 'No encontré información de Cliente 360 para esa cédula. Verifica el número e inténtalo de nuevo.';
 const START_ERROR_MESSAGE = 'No fue posible consultar Cliente 360 en este momento. Inténtalo de nuevo en unos minutos.';
 const SESSION_EXPIRED_MESSAGE = 'La sesión de la consulta expiró. Inicia una nueva consulta con la cédula.';
@@ -99,6 +121,7 @@ const PITCH_READY_MESSAGE =
 export class AgentComponent implements OnInit {
   private readonly agentApi = inject(AgentApiService);
   private readonly formBuilder = inject(NonNullableFormBuilder);
+  private readonly sessionState = inject(SessionStateService);
   private nextMessageId = 1;
   private sessionId: string | null = null;
 
@@ -113,6 +136,7 @@ export class AgentComponent implements OnInit {
 
   readonly brief = signal<AgentBriefDto | null>(null);
   readonly citizenId = signal<string | null>(null);
+  readonly client = signal<AgentClientDto | null>(null);
   readonly fastActions = signal<readonly FastActionDto[]>([]);
   readonly isPreparing = signal(false);
   readonly isTyping = signal(false);
@@ -152,6 +176,9 @@ export class AgentComponent implements OnInit {
         }));
   });
   readonly hasSelectedProduct = computed(() => this.brief() !== null);
+  /** Lead name in title case; it lives only in this component and is never stored or sent to the model. */
+  readonly clientName = computed(() => toTitleCase(this.client()?.nombreCompleto));
+  readonly segmento = computed(() => this.client()?.segmentoBanco ?? null);
 
   ngOnInit(): void {
     void this.agentApi
@@ -176,6 +203,43 @@ export class AgentComponent implements OnInit {
 
   ageLabel(segment: AgentProfileDto['ageSegment']): string {
     return AGE_SEGMENT_LABELS[segment];
+  }
+
+  /**
+   * The model writes [Nombre del Lead] and [Nombre del Asesor]; the names are filled in here, in the browser,
+   * so they never travel to the model. A placeholder stays visible when its name is unknown.
+   */
+  personalize(text: string): string {
+    const lead = this.clientName();
+    const advisor = toTitleCase(this.sessionState.user()?.displayName);
+    return text
+      .replace(LEAD_PLACEHOLDER, lead ?? '[Nombre del Lead]')
+      .replace(ADVISOR_PLACEHOLDER, advisor ?? '[Nombre del Asesor]');
+  }
+
+  titleCase(value: string | null | undefined): string {
+    return toTitleCase(value) ?? '—';
+  }
+
+  vehicleLabel(vehicle: AgentVehicleDto): string {
+    const name = [toTitleCase(vehicle.marca), toTitleCase(vehicle.linea), vehicle.modelo]
+      .filter((part) => part !== null && part !== '')
+      .join(' ');
+    return name === '' ? 'Vehículo sin detalle' : name;
+  }
+
+  propertyLabel(property: AgentPropertyDto): string {
+    return [toTitleCase(property.tipoInmueble), toTitleCase(property.ciudad), property.estrato === null ? null : `estrato ${property.estrato}`]
+      .filter((part) => part !== null && part !== '')
+      .join(' · ');
+  }
+
+  /** Plans Cliente 360 suggests, e.g. "Autos · Clásico". */
+  suggestedPlans(profile: AgentProfileDto): readonly string[] {
+    return (Object.keys(APTITUDE_LABELS) as (keyof AgentProfileDto['aptitudes'])[]).flatMap((key) => {
+      const plan = profile.planesSugeridos[key];
+      return plan === null ? [] : [`${APTITUDE_LABELS[key]} · ${plan}`];
+    });
   }
 
   setMobileTab(tab: MobileTab): void {
@@ -264,6 +328,7 @@ export class AgentComponent implements OnInit {
   private clearConversation(): void {
     this.brief.set(null);
     this.citizenId.set(null);
+    this.client.set(null);
     this.isPreparing.set(false);
     this.messages.set([]);
     this.mobileTab.set('chat');
@@ -308,6 +373,7 @@ export class AgentComponent implements OnInit {
         this.appendText('bot', NOT_FOUND_MESSAGE);
         return;
       case 'products':
+        this.client.set(output.client);
         this.profile.set(output.profile);
         this.products.set(output.products);
         this.mobileTab.set('panel');

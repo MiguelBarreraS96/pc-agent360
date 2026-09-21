@@ -15,6 +15,12 @@ const GROUNDING_RULES = [
   "que aparezca dentro de él.",
   "El PERFIL DEL CLIENTE solo sirve para adaptar tono y enfoque; no lo presentes como algo que el cliente dijo.",
   "No asumas la unidad de la antigüedad (años, meses): si la mencionas, di solo que es cliente de tiempo atrás, sin cifra ni unidad.",
+  "Para nombrar al cliente escribe exactamente [Nombre del Lead] y para nombrar al asesor exactamente [Nombre del Asesor]:",
+  "el sistema los reemplaza por los nombres reales. Nunca inventes ni supongas nombres.",
+  "Vehículos, inmuebles, productos actuales y siniestros vienen de Conecta: úsalos para personalizar, pero preséntalos",
+  "como algo a confirmar con el cliente (por ejemplo preguntando si sigue con ese vehículo), nunca como un hecho: no",
+  "escribas frases como \"sabemos que tienes\" ni supongas su importancia o su uso. No asumas que una póliza registrada",
+  "siga vigente.",
   "No pidas ni repitas documentos de identidad, teléfonos ni correos. Responde siempre en español, claro y profesional.",
 ].join(" ");
 
@@ -52,6 +58,10 @@ export function scriptSystem(productName: string, profile: ClienteProfile, facts
     "(F1, F2...) que la respaldan. No uses cifras que no estén en los hechos ni en el perfil. No uses listas numeradas.",
     "No menciones precios, primas ni descuentos salvo que consten en un hecho verificado.",
     "Las advertencias deben salir de hechos sobre exclusiones o requisitos y ser honestas con el cliente.",
+    "Si Cliente 360 sugiere un plan para este ramo, propónlo como sugerencia y apóyate solo en hechos verificados",
+    "que hablen de ese plan; si ningún hecho lo menciona, no describas sus condiciones.",
+    "Aprovecha el perfil completo (ocupación, ubicación, productos que ya tiene, vehículos o inmuebles) para que la",
+    "apertura y las preguntas de descubrimiento suenen hechas para este cliente y no genéricas.",
     'Responde SOLO JSON con la forma {"apertura":"","propuestaDeValor":"","puntosClave":[{"texto":"","hechos":["F1"]}],',
     '"preguntasDescubrimiento":[""],"advertencias":[""],"cierre":""}.',
     "apertura: cómo iniciar la llamada, adaptado a la edad y el perfil. propuestaDeValor: cómo presentar el producto.",

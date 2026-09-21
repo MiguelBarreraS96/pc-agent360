@@ -9,6 +9,7 @@ y este proyecto adhiere a [Versionamiento Semántico](https://semver.org/lang/es
 ## [No publicado]
 
 ### Agregado
+- Se amplió la consulta a Cliente 360 con nombre, tipo y estado del cliente, ocupación, ubicación, productos que ya tiene, próximos productos y plan sugeridos por Conecta, vehículos, inmuebles y siniestros. El nombre solo se muestra al asesor y reemplaza los marcadores `[Nombre del Lead]` y `[Nombre del Asesor]` del guion en el navegador: no se guarda ni se envía a Gemini, igual que documento, teléfonos, correos, placas y pólizas.
 - Se agregaron autenticación Firebase validada por backend, sesiones opacas, protección CSRF y autorización por permisos.
 - Se agregaron persistencia PostgreSQL, migración de usuarios, roles y sesiones, junto con CRUD administrativo y contratos OpenAPI/Postman.
 - Se agregó preflight de despliegue que exige una referencia de Secret Manager para PostgreSQL y configuración explícita de Cloud Run.

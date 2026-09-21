@@ -9,21 +9,41 @@ import { EMPTY_AGENT_CONTEXT, type AgentContext, type AgentInput, type AgentOutp
 const CLAUSE =
   "El amparo de hurto cubre la pérdida total del vehículo cuando es hurtado, con una vigencia de 12 meses.";
 
+const CLIENT_NAME = "MARIA FERNANDA LOPEZ RUIZ";
+
 const CLIENTE: ClienteResponseDTO = {
+  actividadEconomica: null,
   cliente360: {
     antiguedad: 5,
     aptoAutos: "SI",
     aptoHogar: "NO",
     aptoSalud: null,
     aptoVida: null,
+    cantidadProductos: 2,
     categoriaIngresos: "Medio",
     ciudad: "Bogotá",
     clv: "Alto",
+    departamento: "Cundinamarca",
+    ocupacion: "EMPLEADO",
+    planesSugeridos: { autos: "Clásico", hogar: null, salud: null, vida: null },
     productoRecomendado: "Seguro de Autos",
+    productosActuales: ["ARL"],
+    productosSugeridos: ["Autos", "Vida Individual"],
+    sectorEconomico: null,
+    subsectorEconomico: null,
   },
   contacto: { celulares: [], mejorCelular: null },
-  demografica: { edad: 52 },
+  demografica: { departamento: "Cundinamarca", edad: 52, municipio: "Bogotá" },
+  estadoCliente: "Vigente",
+  inmuebles: [],
+  nombreCompleto: CLIENT_NAME,
+  profesion: null,
+  riesgosHogar: 0,
+  segmentoBanco: "INCLUSION",
+  siniestros: 0,
+  tipoPersona: "Natural",
   valorIngresos: 9_000_000,
+  vehiculos: [{ linea: "ACCENT [6]", marca: "HYUNDAI", modelo: 2023, tipo: "AUTOMOVIL", uso: "PARTICULAR FAMILIAR" }],
 };
 
 function product(id: string, name: string, ragState: Product["rag"]["state"] = "active"): Product {
@@ -116,7 +136,7 @@ function harness(options: { evidence?: readonly RagEvidenceItem[]; found?: boole
     deps,
     llmCalls,
     async run(context, input) {
-      const state = await graph.invoke({ context, correlationId: "test", evidence: [], facts: [], input, intent: null, output: null });
+      const state = await graph.invoke({ context, correlationId: "test", display: null, evidence: [], facts: [], input, intent: null, output: null });
       return { context: state.context, output: state.output as AgentOutput };
     },
   };
@@ -148,6 +168,33 @@ describe("agent graph", () => {
     expect(result.output.products[0]).toMatchObject({ clausuladoDisponible: true, recommended: true });
     expect(result.output.profile).toMatchObject({ ageSegment: "adulto_mayor", edad: 52 });
     expect(JSON.stringify(result.context)).not.toContain("123456");
+  });
+
+  it("gives the advisor the lead's name but keeps it out of the stored context and the model prompts", async () => {
+    const h = harness();
+    const prompts: string[] = [];
+    const spy = createAgentGraph({
+      ...h.deps,
+      llm: {
+        generateJson: async (request) => {
+          prompts.push(request.system, request.prompt);
+          return h.deps.llm.generateJson(request);
+        },
+        generateText: async (request) => {
+          prompts.push(request.system, request.prompt);
+          return h.deps.llm.generateText(request);
+        },
+      },
+    });
+    const base = { correlationId: "test", display: null, evidence: [], facts: [], intent: null, output: null } as const;
+    const started = await spy.invoke({ ...base, context: EMPTY_AGENT_CONTEXT, input: { kind: "start", numeroDocumento: 123456 } });
+    const selected = await spy.invoke({ ...base, context: started.context, input: { kind: "select_product", productId: "auto-1" } });
+
+    expect(started.output).toMatchObject({ client: { nombreCompleto: CLIENT_NAME, segmentoBanco: "INCLUSION" }, kind: "products" });
+    expect(JSON.stringify(selected.context)).not.toContain("MARIA");
+    expect(prompts.join("\n")).not.toContain("MARIA");
+    expect(prompts.join("\n")).toContain("HYUNDAI ACCENT [6] 2023");
+    expect(prompts.join("\n")).toContain("autos: Clásico");
   });
 
   it("builds the pitch from verified clausulado facts only and sanitizes the script", async () => {
@@ -217,6 +264,7 @@ describe("agent graph", () => {
     const state = await empty.invoke({
       context,
       correlationId: "test",
+      display: null,
       evidence: [],
       facts: [],
       input: { kind: "message", text: "¿Cubre el hurto?" },

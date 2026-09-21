@@ -46,11 +46,21 @@ const HTTP_UNAUTHORIZED = 401;
  */
 const CONSULTA_CLIENTE_QUERY = `query ConsultaCliente360($tipoDocumento: String!, $numeroDocumento: BigInt!) {
   cliente(cliente: { tipoDocumento: $tipoDocumento, numeroDocumento: $numeroDocumento }) {
-    demografica { edad }
+    nombreCompleto
+    tipoPersona
+    estadoCliente
+    segmentoBanco
+    profesion
+    actividadEconomicaSbolivar
+    demografica { edad departamento municipio }
     contacto {
       mejorCelular { numeroCelular fuente }
       celulares { numeroCelular fuente }
     }
+    vehiculos { vehiculo { marca linea modelo tipo uso } }
+    riesgosHogar { tipoInmueble }
+    inmuebles { tipoInmueble estrato ciudad }
+    siniestros { estadoSiniestro }
     cliente360 {
       ... on Cliente360NaturalType {
         clv
@@ -62,6 +72,21 @@ const CONSULTA_CLIENTE_QUERY = `query ConsultaCliente360($tipoDocumento: String!
         aptoHogar
         aptoSalud
         aptoVida
+        departamento
+        ocupacion
+        sectorEconomico
+        subsectorEconomico
+        cantidadProductos
+        productos
+        primerProducto
+        segundoProducto
+        tercerProducto
+        cuartoProducto
+        quintoProducto
+        productoAutos
+        productoHogar
+        productoSalud
+        productoVida
       }
     }
     valorIngresos

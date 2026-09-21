@@ -1,3 +1,5 @@
+import type { InmuebleDTO, PlanesSugeridosDTO, VehiculoDTO } from "../cliente360/cliente360-dto";
+
 /** Contracts shared by the sales-assistant LangGraph, its persistence, and its HTTP layer. */
 
 export const PRODUCT_CATEGORIES = ["autos", "hogar", "salud", "vida"] as const;
@@ -19,16 +21,39 @@ export type FactTopic = (typeof FACT_TOPICS)[number];
 
 export type AptitudeFlags = Readonly<Record<ProductCategory, boolean | null>>;
 
-/** Lead profile derived only from Cliente 360 attributes; it never carries the document number or phones. */
+/**
+ * Lead profile derived from Cliente 360. It is persisted and sent to the model, so it never carries the
+ * document number, name, phones, e-mails, addresses, plates or policy numbers.
+ */
 export interface ClienteProfile {
+  readonly actividadEconomica: string | null;
   readonly aptitudes: AptitudeFlags;
   readonly ageSegment: AgeSegment;
   readonly antiguedad: number | null;
   readonly categoriaIngresos: string | null;
   readonly ciudad: string | null;
   readonly clv: string | null;
+  readonly departamento: string | null;
   readonly edad: number | null;
+  readonly estadoCliente: string | null;
+  readonly hogaresAsegurados: number;
+  readonly inmuebles: readonly InmuebleDTO[];
+  readonly ocupacion: string | null;
+  readonly planesSugeridos: PlanesSugeridosDTO;
   readonly productoRecomendado: string | null;
+  readonly productosActuales: readonly string[];
+  readonly productosSugeridos: readonly string[];
+  readonly profesion: string | null;
+  readonly sectorEconomico: string | null;
+  readonly siniestros: number;
+  readonly tipoPersona: string | null;
+  readonly vehiculos: readonly VehiculoDTO[];
+}
+
+/** Identity data shown only to the advisor: it is neither persisted nor sent to the model. */
+export interface ClienteDisplay {
+  readonly nombreCompleto: string | null;
+  readonly segmentoBanco: string | null;
 }
 
 export interface EligibleProduct {
@@ -112,7 +137,12 @@ export interface AnswerSource {
 
 export type AgentOutput =
   | { readonly kind: "not_found" }
-  | { readonly kind: "products"; readonly profile: ClienteProfile; readonly products: readonly EligibleProduct[] }
+  | {
+      readonly kind: "products";
+      readonly client: ClienteDisplay;
+      readonly profile: ClienteProfile;
+      readonly products: readonly EligibleProduct[];
+    }
   | { readonly kind: "pitch"; readonly brief: ProductBrief }
   | { readonly kind: "answer"; readonly grounded: boolean; readonly sources: readonly AnswerSource[]; readonly text: string }
   | { readonly kind: "no_clausulado"; readonly text: string }

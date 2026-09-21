@@ -50,9 +50,33 @@ export interface GraphQLResponse<T> {
 
 /** Datos crudos del cliente devueltos por Conecta antes del enmascaramiento. */
 export interface ConectaClienteData {
+  readonly nombreCompleto: string | null;
+  readonly tipoPersona: string | null;
+  readonly estadoCliente: string | null;
+  readonly segmentoBanco: string | null;
+  readonly profesion: string | null;
+  readonly actividadEconomicaSbolivar: string | null;
   readonly demografica: {
     readonly edad: number | null;
+    readonly departamento: string | null;
+    readonly municipio: string | null;
   } | null;
+  readonly vehiculos: ReadonlyArray<{
+    readonly vehiculo: {
+      readonly marca: string | null;
+      readonly linea: string | null;
+      readonly modelo: number | string | null;
+      readonly tipo: string | null;
+      readonly uso: string | null;
+    } | null;
+  }> | null;
+  readonly riesgosHogar: ReadonlyArray<{ readonly tipoInmueble: string | null }> | null;
+  readonly inmuebles: ReadonlyArray<{
+    readonly tipoInmueble: string | null;
+    readonly estrato: number | string | null;
+    readonly ciudad: string | null;
+  }> | null;
+  readonly siniestros: ReadonlyArray<{ readonly estadoSiniestro: string | null }> | null;
   readonly contacto: {
     readonly mejorCelular: {
       readonly numeroCelular: number | string | null;
@@ -73,6 +97,22 @@ export interface ConectaClienteData {
     readonly aptoHogar: string | null;
     readonly aptoSalud: string | null;
     readonly aptoVida: string | null;
+    readonly departamento: string | null;
+    readonly ocupacion: string | null;
+    readonly sectorEconomico: string | null;
+    readonly subsectorEconomico: string | null;
+    readonly cantidadProductos: number | null;
+    /** Lista JSON serializada como texto, p. ej. `["DEUDORES","ARL"]`. */
+    readonly productos: string | null;
+    readonly primerProducto: string | null;
+    readonly segundoProducto: string | null;
+    readonly tercerProducto: string | null;
+    readonly cuartoProducto: string | null;
+    readonly quintoProducto: string | null;
+    readonly productoAutos: string | null;
+    readonly productoHogar: string | null;
+    readonly productoSalud: string | null;
+    readonly productoVida: string | null;
   } | null;
   readonly valorIngresos: number | null;
 }

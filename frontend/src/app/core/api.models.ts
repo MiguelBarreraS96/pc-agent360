@@ -170,15 +170,48 @@ export interface GeminiPreviewResponse {
 export type AgeSegment = 'joven' | 'adulto_joven' | 'adulto' | 'adulto_mayor' | 'senior' | 'desconocido';
 
 /** Lead attributes derived from Cliente 360; the document number and phones are never included. */
+export interface AgentVehicleDto {
+  readonly linea: string | null;
+  readonly marca: string | null;
+  readonly modelo: number | string | null;
+  readonly tipo: string | null;
+  readonly uso: string | null;
+}
+
+export interface AgentPropertyDto {
+  readonly ciudad: string | null;
+  readonly estrato: number | string | null;
+  readonly tipoInmueble: string | null;
+}
+
 export interface AgentProfileDto {
+  readonly actividadEconomica: string | null;
   readonly aptitudes: Readonly<Record<'autos' | 'hogar' | 'salud' | 'vida', boolean | null>>;
   readonly ageSegment: AgeSegment;
   readonly antiguedad: number | null;
   readonly categoriaIngresos: string | null;
   readonly ciudad: string | null;
   readonly clv: string | null;
+  readonly departamento: string | null;
   readonly edad: number | null;
+  readonly estadoCliente: string | null;
+  readonly hogaresAsegurados: number;
+  readonly inmuebles: readonly AgentPropertyDto[];
+  readonly ocupacion: string | null;
+  readonly planesSugeridos: Readonly<Record<'autos' | 'hogar' | 'salud' | 'vida', string | null>>;
   readonly productoRecomendado: string | null;
+  readonly productosActuales: readonly string[];
+  readonly productosSugeridos: readonly string[];
+  readonly profesion: string | null;
+  readonly siniestros: number;
+  readonly tipoPersona: string | null;
+  readonly vehiculos: readonly AgentVehicleDto[];
+}
+
+/** Identity data for the advisor's screen only; the backend never stores it or sends it to the model. */
+export interface AgentClientDto {
+  readonly nombreCompleto: string | null;
+  readonly segmentoBanco: string | null;
 }
 
 export interface AgentProductDto {
@@ -217,7 +250,12 @@ export interface AgentBriefDto {
 
 export type AgentOutputDto =
   | { readonly kind: 'not_found' }
-  | { readonly kind: 'products'; readonly profile: AgentProfileDto; readonly products: readonly AgentProductDto[] }
+  | {
+      readonly kind: 'products';
+      readonly client: AgentClientDto;
+      readonly profile: AgentProfileDto;
+      readonly products: readonly AgentProductDto[];
+    }
   | { readonly kind: 'pitch'; readonly brief: AgentBriefDto }
   | {
       readonly kind: 'answer';
