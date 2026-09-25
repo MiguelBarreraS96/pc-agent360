@@ -14,6 +14,7 @@ import { forbidden } from "./errors";
 import { correlationIdMiddleware } from "./middleware/correlation-id";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { createProductsRouter } from "./products/products.router";
+import { createReportsRouter } from "./reports/reports.router";
 
 interface HealthResponse {
   readonly correlationId: string;
@@ -26,7 +27,7 @@ function createCorsOptions(allowedOrigins: ReadonlySet<string>): CorsOptions {
   return {
     allowedHeaders: ["Authorization", "Content-Type", "X-Correlation-ID", "X-CSRF-Token"],
     credentials: true,
-    exposedHeaders: ["Retry-After", "X-Correlation-ID"],
+    exposedHeaders: ["Content-Disposition", "Retry-After", "X-Correlation-ID"],
     maxAge: 600,
     methods: ["DELETE", "GET", "OPTIONS", "PATCH", "POST"],
     optionsSuccessStatus: 204,
@@ -109,6 +110,15 @@ export function createApp(dependencies: ApplicationDependencies): Express {
       requireCsrf: dependencies.requireCsrf,
       requireProductsRead: dependencies.requireProductsRead,
       requireProductsWrite: dependencies.requireProductsWrite,
+    }),
+  );
+  app.use(
+    "/api/v1/admin/reports",
+    createReportsRouter({
+      authenticate: dependencies.authenticate,
+      consultationsReportService: dependencies.consultationsReportService,
+      requireAdmin: dependencies.requireAdmin,
+      requireReportsRead: dependencies.requireReportsRead,
     }),
   );
   app.use(

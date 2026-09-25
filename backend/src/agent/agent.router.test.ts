@@ -16,7 +16,9 @@ const SESSION_ID = "3f2b8c1e-6a4d-4e0b-9c1a-2d5e7f8a9b0c";
 const passThrough: RequestHandler = (_request, _response, next): void => next();
 const authenticate: RequestHandler = (req, _response, next): void => {
   req.correlationId = "test-correlation";
-  req.authenticatedPrincipal = { user: { id: "user-1" } } as NonNullable<typeof req.authenticatedPrincipal>;
+  req.authenticatedPrincipal = { user: { id: "user-1", email: "asesor@segurosbolivar.com" } } as NonNullable<
+    typeof req.authenticatedPrincipal
+  >;
   next();
 };
 
@@ -44,7 +46,7 @@ describe("agent router", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers["cache-control"]).toBe("no-store");
-    expect(start).toHaveBeenCalledWith("user-1", 1012345678, "test-correlation");
+    expect(start).toHaveBeenCalledWith({ email: "asesor@segurosbolivar.com", id: "user-1" }, 1012345678, "test-correlation");
   });
 
   it.each([{ documentNumber: "12" }, { documentNumber: "12345678901" }, { documentNumber: 1012345678 }, { documentNumber: "1012345678", extra: 1 }, {}])(

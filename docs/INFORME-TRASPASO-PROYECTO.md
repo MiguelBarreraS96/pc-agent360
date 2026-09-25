@@ -121,6 +121,8 @@ Todos bajo `/api/v1` salvo Cliente 360.
 | POST | `/admin/products/:id/rag/probe` | Prueba cruda de búsqueda RAG |
 | POST | `/admin/products/:id/rag/ask` | Mini agente: pregunta + respuesta de Gemini con evidencia |
 | GET/POST/DELETE | `/admin/products/:id/documents[/:documentId]` | Subida (PDF, TXT, DOC, DOCX; máx 50 MB) e indexación |
+| GET | `/admin/reports/consultations/summary` | Rol `ADMIN` + `reports:read` — totales de consultas de Cliente 360 por rango `desde`/`hasta` (hora Bogotá) |
+| GET | `/admin/reports/consultations/export` | Rol `ADMIN` + `reports:read` — descarga CSV/XML de `desde`/`hasta`/`formato`; 422 si el rango supera 100.000 filas |
 | POST | `/products/:productId/chat` | `agent:read` — chat RAG por producto (anterior al agente) |
 | GET | `/agent/fast-actions` | `agent:read` |
 | POST | `/agent/sessions` | `agent:read` + CSRF — body `{ documentNumber }` |
@@ -143,7 +145,7 @@ Todos bajo `/api/v1` salvo Cliente 360.
 
 ### 5.3 Roles y permisos
 
-- Permisos existentes: `agent:read`, `emails:manage`, `products:read`, `products:write`, `users:read`, `users:write`, `roles:read`, `roles:write` (`src/access/access.models.ts`).
+- Permisos existentes: `agent:read`, `emails:manage`, `products:read`, `products:write`, `reports:read`, `users:read`, `users:write`, `roles:read`, `roles:write` (`src/access/access.models.ts`). `reports:read` habilita el reporte de consultas de Cliente 360 (`/admin/reports/consultations/*`).
 - Roles protegidos sembrados por `npm run seed`: **USER** (solo `agent:read`) y **ADMIN** (todos).
 - Las rutas `/admin/*` exigen **el rol ADMIN y además** el permiso específico. Un rol personalizado no puede obtener administración.
 - Nunca se puede dejar el sistema sin un ADMIN activo (transacción con bloqueo en `system/administratorContinuityLock`).
@@ -155,7 +157,7 @@ Todos bajo `/api/v1` salvo Cliente 360.
 | `users` | Whitelist de correos, `roleId`, `isActive` |
 | `roles` | Roles y permisos |
 | `authSessions` | Sesiones de login (hashes) |
-| `agentSessions` | Conversación del agente (contexto LangGraph), TTL 4 h, ligada al usuario dueño |
+| `agentSessions` | Conversación del agente (contexto LangGraph) y, en la raíz (fuera del contexto): `documento` consultado, `encontrado` (si Cliente 360 encontró al cliente) y `asesorEmail`. `expiresAt` (createdAt + 4 h, o igual a `createdAt` si `encontrado` es `false`) solo limita cuánto puede **usarse** la conversación; **no** se borra el documento ni se activa TTL de Firestore, porque se conservan por trazabilidad (ver punto 12) |
 | `products` | Catálogo + estado RAG (`none`/`creating`/`active`/`error`) e IDs de DataStore/Engine |
 | `productDocuments` (ver `product-document.repository.ts`) | Metadatos de documentos subidos |
 | `system/administratorContinuityLock` | Documento de bloqueo |
@@ -228,6 +230,7 @@ Archivos clave:
 | `/agent` (inicio) | `agent:read` | `features/agent/agent.component` |
 | `/correos-conectados` | ADMIN + `users:read` | Whitelist y roles |
 | `/productos` | ADMIN + `products:read` | Productos, documentos y agente RAG |
+| `/consultas` | ADMIN + `reports:read` | Reporte de consultas de Cliente 360 (resumen y descarga CSV/XML) |
 
 La pantalla independiente "Consulta Cliente 360" **se quitó** del menú en el último commit (`4a12b6d`); la consulta ahora ocurre dentro del flujo del agente. El endpoint del backend sigue existiendo.
 
@@ -330,7 +333,7 @@ Estado verificado al escribir este informe: `tsc --noEmit` del backend sin error
 | 9 | Hay dos formas de conversar con el RAG: el **chat por producto** (`/products/:id/chat`) y el **agente** (`/agent/*`). El chat parece ser del flujo anterior; confirma si el frontend todavía lo usa antes de quitarlo. | `backend/src/chat/` |
 | 10 | Pocos tests: solo agente y enmascarado PII. **Sin tests** en auth, access, products, RAG ni frontend. | — |
 | 11 | Los backends son `--allow-unauthenticated` y `--ingress all`. El README advierte que era "temporal"; hoy la protección es la sesión/CSRF propia. | `scripts/deploy.mjs` |
-| 12 | `agentSessions` guarda `expiresAt` (4 h), pero hay que verificar que exista una **política TTL en Firestore** para borrar las sesiones vencidas, o se acumularán. | Consola de Firestore |
+| 12 | **Decisión de negocio (no pendiente):** `agentSessions` **no** activa la política TTL de Firestore. Las sesiones se conservan indefinidamente por trazabilidad del reporte de consultas de Cliente 360 (`docs/PLAN-REPORTE-CONSULTAS-CLIENTE360.md`); `expiresAt` (4 h) solo limita cuánto puede **usarse** la conversación, no borra el documento. Esto implica cédulas almacenadas sin fecha de borrado: documentar la finalidad y retención con el responsable de datos (Ley 1581 de 2012). | `agent-session.repository.ts`, Consola de Firestore |
 | 13 | Los modelos TypeScript del frontend (`api.models.ts`) se duplican a mano respecto al backend; cualquier cambio de contrato debe hacerse en ambos lados. | `frontend/src/app/core/api.models.ts` |
 | 14 | La carpeta `.kilo/worktrees/` es un checkout local viejo de otra herramienta de IA; no forma parte del proyecto. | `.kilo/` |
 
@@ -341,7 +344,7 @@ Estado verificado al escribir este informe: `tsc --noEmit` del backend sin error
 1. ¿Dónde están los valores de `.env` que usaba en local (bucket RAG, secretos de Conecta)? ¿Tengo permisos en `sb-dominique-ai` y en Secret Manager?
 2. ¿Está configurado el **JFrog** o se instala desde npm público de momento?
 3. ¿Qué productos existen hoy en producción y cuáles tienen el clausulado cargado (RAG `active`)?
-4. ¿Hay una política TTL en Firestore para `agentSessions` y `authSessions`?
+4. ¿Hay una política TTL en Firestore para `authSessions`? (Para `agentSessions` ya se decidió que **no**: se conservan por trazabilidad; confirmar que ninguna política TTL quedó activa por error en la consola de Firestore.)
 5. ¿El chat por producto (`/products/:id/chat`) y la preview de Gemini se siguen usando o se pueden eliminar?
 6. ¿Qué es lo próximo en el roadmap? ¿Hay tareas o historias pendientes fuera del repo (Jira, etc.)?
 7. ¿Quién aprueba los despliegues y hay un ambiente de pruebas aparte de producción?

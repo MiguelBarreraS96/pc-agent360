@@ -17,7 +17,6 @@ import type {
   AgentBriefDto,
   AgentClientDto,
   AgentPropertyDto,
-  AgentVehicleDto,
   AgentFactDto,
   AgentOutputDto,
   AgentProductDto,
@@ -224,13 +223,6 @@ export class AgentComponent implements OnInit {
 
   titleCase(value: string | null | undefined): string {
     return toTitleCase(value) ?? '—';
-  }
-
-  vehicleLabel(vehicle: AgentVehicleDto): string {
-    const name = [toTitleCase(vehicle.marca), toTitleCase(vehicle.linea), vehicle.modelo]
-      .filter((part) => part !== null && part !== '')
-      .join(' ');
-    return name === '' ? 'Vehículo sin detalle' : name;
   }
 
   propertyLabel(property: AgentPropertyDto): string {

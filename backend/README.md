@@ -52,7 +52,9 @@ $env:BOOTSTRAP_ADMIN_EMAIL = "<correo-administrador-autorizado>"
 npm run seed
 ```
 
-El rol `USER` solo tiene `agent:read`. `ADMIN` tiene `agent:read`, `emails:manage`, `products:read`, `users:read`, `users:write`, `roles:read` y `roles:write`. Los roles protegidos no pueden modificarse ni eliminarse por API; los roles personalizados aceptan únicamente esta allowlist de permisos. Los permisos no sustituyen el rol `ADMIN` en las rutas administrativas.
+El rol `USER` solo tiene `agent:read`. `ADMIN` tiene `agent:read`, `emails:manage`, `products:read`, `products:write`, `reports:read`, `users:read`, `users:write`, `roles:read` y `roles:write`. Los roles protegidos no pueden modificarse ni eliminarse por API; los roles personalizados aceptan únicamente esta allowlist de permisos. Los permisos no sustituyen el rol `ADMIN` en las rutas administrativas.
+
+`reports:read` habilita el reporte administrativo de consultas de Cliente 360 (`/api/v1/admin/reports/consultations/*`): consultar totales por rango de fechas y descargar el detalle en CSV o XML. Requiere además el rol `ADMIN`, igual que Productos.
 
 ## Endpoints
 | Método | Ruta | Autorización |
@@ -68,6 +70,8 @@ El rol `USER` solo tiene `agent:read`. `ADMIN` tiene `agent:read`, `emails:manag
 | `GET`, `PATCH`, `DELETE` | `/api/v1/admin/users/{userId}` | Rol `ADMIN` y `users:read` / `users:write` (+ CSRF en mutaciones) |
 | `GET`, `POST` | `/api/v1/admin/roles` | Rol `ADMIN` y `roles:read` / `roles:write` (+ CSRF en POST) |
 | `GET`, `PATCH`, `DELETE` | `/api/v1/admin/roles/{roleId}` | Rol `ADMIN` y `roles:read` / `roles:write` (+ CSRF en mutaciones) |
+| `GET` | `/api/v1/admin/reports/consultations/summary` | Rol `ADMIN` y `reports:read`; totales de consultas de Cliente 360 por rango de fechas (`desde`, `hasta`) |
+| `GET` | `/api/v1/admin/reports/consultations/export` | Rol `ADMIN` y `reports:read`; descarga CSV/XML con una fila por consulta (`desde`, `hasta`, `formato`); 422 si supera 100.000 filas |
 
 Ejemplo de creación de sesión exitoso, sin revelar el secreto de cookie:
 

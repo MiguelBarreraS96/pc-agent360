@@ -3,6 +3,7 @@ export const PERMISSIONS = [
   'emails:manage',
   'products:read',
   'products:write',
+  'reports:read',
   'users:read',
   'users:write',
   'roles:read',
@@ -285,4 +286,17 @@ export interface ApiErrorResponse {
     readonly code: string;
     readonly message: string;
   };
+}
+
+export const CONSULTATIONS_EXPORT_FORMATS = ['csv', 'xml'] as const;
+export type ConsultationsExportFormat = (typeof CONSULTATIONS_EXPORT_FORMATS)[number];
+
+/** Summary of Cliente 360 consultations for a Bogotá date range, backing the admin "Consultas" report. */
+export interface ConsultationsSummaryDto {
+  readonly desde: string;
+  readonly documentosUnicos: number;
+  readonly encontradas: number;
+  readonly hasta: string;
+  readonly noEncontradas: number;
+  readonly totalConsultas: number;
 }

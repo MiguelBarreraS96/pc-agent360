@@ -29,6 +29,7 @@ import { createDiscoveryEngineClients } from "./rag/discovery-engine.client";
 import { DiscoveryEngineGateway } from "./rag/discovery-engine.gateway";
 import { createRagStorageClient } from "./rag/gcs.client";
 import { RagStorageGateway } from "./rag/gcs.gateway";
+import { ConsultationsReportService } from "./reports/consultations-report.service";
 
 const AUTHENTICATION_RATE_LIMIT_WINDOW_MILLISECONDS = 15 * 60 * 1_000;
 const AUTHENTICATION_RATE_LIMIT_MAX_REQUESTS = 10;
@@ -41,6 +42,7 @@ export interface ApplicationDependencies {
   readonly authService: AuthService;
   readonly chatService: ChatService;
   readonly config: AppConfig;
+  readonly consultationsReportService: ConsultationsReportService;
   readonly productDocumentsService: ProductDocumentsService;
   readonly productRagAgentService: ProductRagAgentService;
   readonly productsService: ProductsService;
@@ -51,6 +53,7 @@ export interface ApplicationDependencies {
   readonly requireCsrf: import("express").RequestHandler;
   readonly requireProductsRead: import("express").RequestHandler;
   readonly requireProductsWrite: import("express").RequestHandler;
+  readonly requireReportsRead: import("express").RequestHandler;
   readonly requireRolesRead: import("express").RequestHandler;
   readonly requireRolesWrite: import("express").RequestHandler;
   readonly requireUsersRead: import("express").RequestHandler;
@@ -107,6 +110,7 @@ export function createApplicationDependencies(config: AppConfig, firestore: Fire
   const geminiGateway = new GeminiGateway(geminiClient, config.gemini.model);
   const productRagAgentService = new ProductRagAgentService(productsService, geminiGateway);
   const chatService = new ChatService(productsService, discoveryEngineGateway, geminiGateway);
+  const agentSessionRepository = new AgentSessionRepository(firestore);
   const agentService = new AgentService(
     createAgentGraph({
       catalog: productsService,
@@ -117,7 +121,7 @@ export function createApplicationDependencies(config: AppConfig, firestore: Fire
       },
       llm: new GeminiAgentLlm(geminiClient, config.gemini.model),
     }),
-    new AgentSessionRepository(firestore),
+    agentSessionRepository,
   );
 
   return {
@@ -126,6 +130,7 @@ export function createApplicationDependencies(config: AppConfig, firestore: Fire
     authService,
     chatService,
     config,
+    consultationsReportService: new ConsultationsReportService(agentSessionRepository),
     productDocumentsService,
     productRagAgentService,
     productsService,
@@ -142,6 +147,7 @@ export function createApplicationDependencies(config: AppConfig, firestore: Fire
     requireCsrf: createCsrfMiddleware(authService),
     requireProductsRead: createPermissionMiddleware("products:read"),
     requireProductsWrite: createPermissionMiddleware("products:write"),
+    requireReportsRead: createPermissionMiddleware("reports:read"),
     requireRolesRead: createPermissionMiddleware("roles:read"),
     requireRolesWrite: createPermissionMiddleware("roles:write"),
     requireUsersRead: createPermissionMiddleware("users:read"),

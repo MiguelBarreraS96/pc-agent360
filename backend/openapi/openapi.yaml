@@ -905,6 +905,87 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/admin/reports/consultations/summary:
+    get:
+      tags: [Reports]
+      summary: Totales de consultas de Cliente 360 en un rango de fechas
+      description: >-
+        Requiere el rol ADMIN y el permiso reports:read. Cuenta las consultas de agentSessions con
+        createdAt en el rango [desde 00:00:00, hasta 23:59:59.999] hora America/Bogota, incluidas
+        las no encontradas. Nunca cachea la respuesta ni registra cédulas en el log de auditoría.
+      operationId: getConsultationsSummary
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ReportDesde'
+        - $ref: '#/components/parameters/ReportHasta'
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Totales del rango solicitado.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultationsSummaryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/admin/reports/consultations/export:
+    get:
+      tags: [Reports]
+      summary: Descarga las consultas de Cliente 360 de un rango de fechas
+      description: >-
+        Requiere el rol ADMIN y el permiso reports:read. Devuelve una fila por consulta
+        (documento, fechaConsulta, asesor, encontrado) como CSV (UTF-8 con BOM, separador ';',
+        CRLF) o XML. Responde 422 si el rango supera 100.000 filas. Nunca cachea la respuesta ni
+        registra cédulas en el log de auditoría.
+      operationId: exportConsultations
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/ReportDesde'
+        - $ref: '#/components/parameters/ReportHasta'
+        - $ref: '#/components/parameters/ReportFormato'
+      security:
+        - SessionCookie: []
+      responses:
+        '200':
+          description: Archivo de descarga con una fila por consulta.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControlNoStore'
+            Content-Disposition:
+              description: attachment; filename="consultas-cliente360_{desde}_{hasta}.{csv|xml}"
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/xml:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
   securitySchemes:
     FirebaseIdToken:
@@ -966,6 +1047,30 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/UuidV4'
+    ReportDesde:
+      name: desde
+      in: query
+      required: true
+      description: Fecha inicio inclusiva (America/Bogota), YYYY-MM-DD.
+      schema:
+        type: string
+        format: date
+    ReportHasta:
+      name: hasta
+      in: query
+      required: true
+      description: Fecha fin inclusiva (America/Bogota), YYYY-MM-DD. No puede ser posterior a hoy ni distar de desde más de 366 días.
+      schema:
+        type: string
+        format: date
+    ReportFormato:
+      name: formato
+      in: query
+      required: true
+      description: Formato del archivo descargado.
+      schema:
+        type: string
+        enum: [csv, xml]
   headers:
     CacheControlNoStore:
       description: Impide almacenar la respuesta que contiene un CSRF nuevo.
@@ -1007,6 +1112,14 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
     Conflict:
       description: El estado actual no permite procesar la solicitud.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: >-
+        La solicitud es válida pero no se puede procesar (por ejemplo, un rango de fechas con más
+        de 100.000 consultas).
       content:
         application/json:
           schema:
@@ -1058,6 +1171,7 @@ components:
         - emails:manage
         - products:read
         - products:write
+        - reports:read
         - users:read
         - users:write
         - roles:read
@@ -1204,7 +1318,7 @@ components:
         permissions:
           type: array
           minItems: 1
-          maxItems: 8
+          maxItems: 9
           uniqueItems: true
           items:
             $ref: '#/components/schemas/Permission'
@@ -1224,10 +1338,33 @@ components:
         permissions:
           type: array
           minItems: 1
-          maxItems: 8
+          maxItems: 9
           uniqueItems: true
           items:
             $ref: '#/components/schemas/Permission'
+    ConsultationsSummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [desde, hasta, totalConsultas, documentosUnicos, encontradas, noEncontradas]
+      properties:
+        desde:
+          type: string
+          format: date
+        hasta:
+          type: string
+          format: date
+        totalConsultas:
+          type: integer
+          minimum: 0
+        documentosUnicos:
+          type: integer
+          minimum: 0
+        encontradas:
+          type: integer
+          minimum: 0
+        noEncontradas:
+          type: integer
+          minimum: 0
     ErrorResponse:
       type: object
       additionalProperties: false
@@ -1250,6 +1387,7 @@ components:
                 - NOT_FOUND
                 - RATE_LIMITED
                 - UNAUTHENTICATED
+                - UNPROCESSABLE_ENTITY
             message:
               type: string
               description: Mensaje genérico sin detalles internos.

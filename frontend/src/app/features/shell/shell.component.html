@@ -40,6 +40,18 @@
             <span class="nav-label">Productos</span>
           </a>
         }
+        @if (sessionState.hasPermission('reports:read')) {
+          <a
+            class="nav-item"
+            routerLink="/consultas"
+            routerLinkActive="active"
+            [attr.title]="compact ? 'Consultas' : null"
+            (click)="closeDrawer()"
+          >
+            <i class="bi bi-file-earmark-bar-graph" aria-hidden="true"></i>
+            <span class="nav-label">Consultas</span>
+          </a>
+        }
       </nav>
     }
 

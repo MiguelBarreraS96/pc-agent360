@@ -1,0 +1,94 @@
+<section aria-label="Consultas de Cliente 360" class="space-y-4">
+  <div class="glass rounded-[24px] p-4 sm:p-5">
+    <h2 class="font-bold text-[15px] text-ink mb-1">Consultas por rango de fechas</h2>
+    <p class="text-[12px] text-ink/40 mb-4">Filtra por la fecha de la consulta a Cliente 360 (hora Colombia).</p>
+
+    <form class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 sm:items-end" [formGroup]="form" (ngSubmit)="consult()" novalidate>
+      <div>
+        <label for="consultas-desde" class="block text-[12px] font-semibold text-ink/55 mb-2">Fecha inicio</label>
+        <input id="consultas-desde" class="field field-plain" type="date" formControlName="desde" [max]="today" required>
+      </div>
+      <div>
+        <label for="consultas-hasta" class="block text-[12px] font-semibold text-ink/55 mb-2">Fecha fin</label>
+        <input id="consultas-hasta" class="field field-plain" type="date" formControlName="hasta" [max]="today" required>
+      </div>
+      <button class="btn-primary px-4 py-2.5 text-[13px] flex items-center justify-center gap-2" type="submit" [disabled]="isLoading()">
+        @if (isLoading()) {
+          <span class="inline-block w-3.5 h-3.5 border-2 border-current border-r-transparent rounded-full animate-spin" aria-hidden="true"></span>
+        } @else {
+          <i class="bi bi-search" aria-hidden="true"></i>
+        }
+        Consultar
+      </button>
+    </form>
+
+    @if (validationMessage(); as message) {
+      <p class="text-[12.5px] text-red-600 mt-3" role="alert">{{ message }}</p>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="glass rounded-[24px] p-10 flex items-center justify-center gap-3 text-ink/45 text-[13px]" role="status">
+      <span class="inline-block w-4 h-4 border-2 border-current border-r-transparent rounded-full animate-spin" aria-hidden="true"></span>
+      Consultando
+    </div>
+  } @else if (errorMessage(); as message) {
+    <div class="text-[13px] text-red-700 bg-red-500/10 border border-red-500/25 rounded-2xl px-4 py-3" role="alert">
+      <p>{{ message }}</p>
+    </div>
+  } @else if (summary(); as data) {
+    <article class="glass rounded-[24px] p-4 sm:p-5" aria-live="polite">
+      <p class="text-[12px] text-ink/40 mb-1">{{ rangeLabel() }}</p>
+      <p class="text-[34px] font-extrabold text-ink leading-none">{{ data.totalConsultas }}</p>
+      <p class="text-[12px] text-ink/50 mt-1">Total de consultas</p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-4">
+        <div class="glass-soft rounded-[16px] p-3 text-center">
+          <p class="text-[18px] font-bold text-ink">{{ data.documentosUnicos }}</p>
+          <p class="text-[11px] text-ink/45 mt-0.5">Documentos únicos</p>
+        </div>
+        <div class="glass-soft rounded-[16px] p-3 text-center">
+          <p class="text-[18px] font-bold text-bolivar-600">{{ data.encontradas }}</p>
+          <p class="text-[11px] text-ink/45 mt-0.5">Encontrados</p>
+        </div>
+        <div class="glass-soft rounded-[16px] p-3 text-center">
+          <p class="text-[18px] font-bold text-ink/70">{{ data.noEncontradas }}</p>
+          <p class="text-[11px] text-ink/45 mt-0.5">No encontrados</p>
+        </div>
+      </div>
+
+      @if (hasNoResults()) {
+        <p class="text-[13px] text-ink/45 mt-4" role="status">No hay consultas en el rango seleccionado.</p>
+      } @else {
+        <div class="flex flex-col sm:flex-row gap-2.5 mt-4">
+          <button
+            class="btn-ghost flex-1 py-2.5 text-[13px] flex items-center justify-center gap-2"
+            type="button"
+            (click)="downloadCsv()"
+            [disabled]="downloadingFormat() !== null"
+          >
+            @if (downloadingFormat() === 'csv') {
+              <span class="inline-block w-3.5 h-3.5 border-2 border-current border-r-transparent rounded-full animate-spin" aria-hidden="true"></span>
+            } @else {
+              <i class="bi bi-filetype-csv" aria-hidden="true"></i>
+            }
+            Descargar CSV
+          </button>
+          <button
+            class="btn-ghost flex-1 py-2.5 text-[13px] flex items-center justify-center gap-2"
+            type="button"
+            (click)="downloadXml()"
+            [disabled]="downloadingFormat() !== null"
+          >
+            @if (downloadingFormat() === 'xml') {
+              <span class="inline-block w-3.5 h-3.5 border-2 border-current border-r-transparent rounded-full animate-spin" aria-hidden="true"></span>
+            } @else {
+              <i class="bi bi-filetype-xml" aria-hidden="true"></i>
+            }
+            Descargar XML
+          </button>
+        </div>
+      }
+    </article>
+  }
+</section>

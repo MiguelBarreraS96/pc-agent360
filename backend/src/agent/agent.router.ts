@@ -6,7 +6,7 @@ import { asyncHandler } from "../http/async-handler";
 import { parseInput, uuidV4Schema } from "../validation";
 
 import { agentMessageSchema, fastActionSchema, selectProductSchema, startSessionSchema } from "./agent.schemas";
-import type { AgentService, AgentTurnResponse } from "./agent.service";
+import type { AgentSessionOwner, AgentService, AgentTurnResponse } from "./agent.service";
 import { listFastActions } from "./fast-actions";
 
 export interface AgentRouterDependencies {
@@ -41,6 +41,15 @@ export function createAgentRouter(dependencies: AgentRouterDependencies): Router
     return userId;
   }
 
+  function sessionOwnerOf(request: Parameters<RequestHandler>[0]): AgentSessionOwner {
+    const user = request.authenticatedPrincipal?.user;
+    if (user === undefined) {
+      throw unauthenticated();
+    }
+
+    return { email: user.email, id: user.id };
+  }
+
   router.get("/fast-actions", ...guards, (_request, response): void => {
     send(response, { fastActions: listFastActions() });
   });
@@ -51,7 +60,7 @@ export function createAgentRouter(dependencies: AgentRouterDependencies): Router
     asyncHandler(async (request, response): Promise<void> => {
       const input = parseInput(startSessionSchema, request.body);
       try {
-        send(response, await dependencies.agentService.start(ownerOf(request), input.documentNumber, request.correlationId));
+        send(response, await dependencies.agentService.start(sessionOwnerOf(request), input.documentNumber, request.correlationId));
       } catch (error: unknown) {
         // Cliente 360 upstream failures keep the same controlled statuses and codes as the consulta endpoint.
         const code = extractErrorCode(error);

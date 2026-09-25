@@ -12,6 +12,7 @@ const PERMISSION_LABELS: Readonly<Record<Permission, string>> = {
   'emails:manage': 'Gestionar correos',
   'products:read': 'Consultar productos',
   'products:write': 'Gestionar productos',
+  'reports:read': 'Consultar y descargar reporte de consultas',
   'users:read': 'Consultar usuarios',
   'users:write': 'Gestionar usuarios',
   'roles:read': 'Consultar roles',
@@ -54,6 +55,7 @@ export class RoleManagementComponent {
     name: this.formBuilder.control('', [Validators.required, Validators.maxLength(120), nonBlankValidator]),
     productsRead: this.formBuilder.control(false),
     productsWrite: this.formBuilder.control(false),
+    reportsRead: this.formBuilder.control(false),
     rolesRead: this.formBuilder.control(false),
     rolesWrite: this.formBuilder.control(false),
     usersRead: this.formBuilder.control(false),
@@ -115,6 +117,7 @@ export class RoleManagementComponent {
       name: '',
       productsRead: false,
       productsWrite: false,
+      reportsRead: false,
       rolesRead: false,
       rolesWrite: false,
       usersRead: false,
@@ -139,6 +142,7 @@ export class RoleManagementComponent {
       name: role.name,
       productsRead: role.permissions.includes('products:read'),
       productsWrite: role.permissions.includes('products:write'),
+      reportsRead: role.permissions.includes('reports:read'),
       rolesRead: role.permissions.includes('roles:read'),
       rolesWrite: role.permissions.includes('roles:write'),
       usersRead: role.permissions.includes('users:read'),
@@ -223,6 +227,7 @@ export class RoleManagementComponent {
     if (this.form.controls.emailsManage.value) permissions.push('emails:manage');
     if (this.form.controls.productsRead.value) permissions.push('products:read');
     if (this.form.controls.productsWrite.value) permissions.push('products:write');
+    if (this.form.controls.reportsRead.value) permissions.push('reports:read');
     if (this.form.controls.usersRead.value) permissions.push('users:read');
     if (this.form.controls.usersWrite.value) permissions.push('users:write');
     if (this.form.controls.rolesRead.value) permissions.push('roles:read');

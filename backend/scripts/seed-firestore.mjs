@@ -19,6 +19,7 @@ const PROTECTED_ROLES = [
       'emails:manage',
       'products:read',
       'products:write',
+      'reports:read',
       'users:read',
       'users:write',
       'roles:read',

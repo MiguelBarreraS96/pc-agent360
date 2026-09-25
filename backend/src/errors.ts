@@ -4,9 +4,10 @@ export type ApiErrorCode =
   | "FORBIDDEN"
   | "NOT_FOUND"
   | "RATE_LIMITED"
-  | "UNAUTHENTICATED";
+  | "UNAUTHENTICATED"
+  | "UNPROCESSABLE_ENTITY";
 
-type ApiErrorStatus = 400 | 401 | 403 | 404 | 409 | 429;
+type ApiErrorStatus = 400 | 401 | 403 | 404 | 409 | 422 | 429;
 
 /** Represent a safe client-facing failure without retaining sensitive cause details. */
 export class ApiError extends Error {
@@ -47,6 +48,11 @@ export function notFound(): ApiError {
 /** Create a generic rate-limit failure. */
 export function rateLimited(): ApiError {
   return new ApiError(429, "RATE_LIMITED");
+}
+
+/** Create a failure for a well-formed request whose semantics cannot be processed (e.g. a report range too large). */
+export function unprocessableEntity(): ApiError {
+  return new ApiError(422, "UNPROCESSABLE_ENTITY");
 }
 
 /** Create a generic authentication failure. */

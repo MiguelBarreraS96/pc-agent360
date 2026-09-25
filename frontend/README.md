@@ -10,8 +10,9 @@ Aplicación Angular standalone de Agente 360. Implementa acceso con Firebase Ema
 - Cierre por inactividad configurable. Los eventos reales de usuario envían `POST /api/v1/auth/activity` con CSRF para actualizar actividad de forma explícita; los `GET` no mantienen viva la sesión.
 - Interceptor funcional limitado al origen API configurado: añade `withCredentials`, UUID v4 de correlación y CSRF solo cuando corresponde.
 - Guards de sesión y permisos para UX; el backend conserva la autoridad de autorización.
-- Shell con Agente IA para usuarios autorizados y Correos conectados/Productos exclusivamente para `ADMIN` con sus permisos vigentes.
+- Shell con Agente IA para usuarios autorizados y Correos conectados/Productos/Consultas exclusivamente para `ADMIN` con sus permisos vigentes.
 - CRUD de whitelist y roles/permisos en Correos conectados. Productos y Agente IA son vistas seguras sin datos reales ni CRUD adicional.
+- Consultas: reporte de consultas de Cliente 360 por rango de fechas (resumen y descarga CSV/XML) para `ADMIN` con `reports:read`.
 
 ## Dependencias y lockfile institucional
 
@@ -57,6 +58,7 @@ No incluya cuentas de servicio, tokens, credenciales PostgreSQL, correos bootstr
 | Cerrar sesión | `POST /api/v1/auth/logout` con cookie y CSRF |
 | Whitelist | `GET/POST/PATCH/DELETE /api/v1/admin/users` para `ADMIN` |
 | Roles | `GET/POST/PATCH/DELETE /api/v1/admin/roles` para `ADMIN` |
+| Consultas | `GET /api/v1/admin/reports/consultations/summary` y `/export` para `ADMIN` con `reports:read` |
 
 La cookie nunca se lee desde TypeScript. El CSRF vive únicamente en un signal privado de memoria y se rota en creación, bootstrap o renovación. Los errores mostrados son genéricos; no se registran tokens, correos, cookies ni prompts.
 
@@ -69,6 +71,7 @@ La cookie nunca se lee desde TypeScript. El CSRF vive únicamente en un signal p
 | `/agent` | Sesión con `agent:read` |
 | `/correos-conectados` | Rol protegido `ADMIN` con permisos administrativos |
 | `/productos` | Rol protegido `ADMIN` con `products:read` |
+| `/consultas` | Rol protegido `ADMIN` con `reports:read` |
 
 ## Tailwind, CSP y Nginx
 
@@ -96,6 +99,6 @@ src/app/
   features/auth/                Login y callback de Firebase Email Link
   features/shell/               Navegación protegida por permisos
   features/agent/               Placeholder seguro de Agente IA
-  features/admin/               Whitelist, roles/permisos y Productos
+  features/admin/               Whitelist, roles/permisos, Productos y Consultas (reporte Cliente 360)
 public/assets/runtime-config.template.json  Plantilla pública inyectada por ambiente
 ```

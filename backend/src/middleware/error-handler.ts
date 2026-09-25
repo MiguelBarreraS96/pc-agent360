@@ -13,7 +13,7 @@ interface ErrorResponse {
 
 interface ResolvedError {
   readonly code: ApiErrorCode | "INTERNAL_ERROR";
-  readonly status: 400 | 401 | 403 | 404 | 409 | 429 | 500;
+  readonly status: 400 | 401 | 403 | 404 | 409 | 422 | 429 | 500;
 }
 
 /** Resolve safe client-facing statuses without exposing causes, database messages, or inputs. */
@@ -50,6 +50,7 @@ function errorMessage(code: ResolvedError["code"] | "NOT_FOUND"): string {
     case "BAD_REQUEST":
     case "CONFLICT":
     case "RATE_LIMITED":
+    case "UNPROCESSABLE_ENTITY":
       return "Request could not be processed.";
     case "INTERNAL_ERROR":
       return "An unexpected error occurred.";

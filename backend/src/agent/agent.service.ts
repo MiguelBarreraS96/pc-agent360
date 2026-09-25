@@ -19,6 +19,12 @@ export interface AgentTurnResponse {
   readonly sessionId: string | null;
 }
 
+/** The authenticated advisor starting a conversation, identified for both ownership and report traceability. */
+export interface AgentSessionOwner {
+  readonly email: string;
+  readonly id: string;
+}
+
 /** Application use cases of the sales assistant: load the conversation, run one graph turn, persist the result. */
 export class AgentService {
   public constructor(
@@ -26,16 +32,45 @@ export class AgentService {
     private readonly sessions: AgentSessionRepository,
   ) {}
 
-  /** Start a conversation from the lead's document number; a session exists only when the lead was found. */
-  public async start(ownerUserId: string, numeroDocumento: number, correlationId: string): Promise<AgentTurnResponse> {
+  /**
+   * Start a conversation from the lead's document number. When Cliente 360 finds the lead, a resumable session is
+   * created (`encontrado: true`) and its id is returned. When the lead is not found, a non-resumable consultation
+   * record is still created for the report (`encontrado: false`, expired on arrival), but `sessionId` stays `null`
+   * so the frontend behaves exactly as before. Technical failures (`unavailable`) persist nothing.
+   */
+  public async start(
+    owner: AgentSessionOwner,
+    numeroDocumento: number,
+    correlationId: string,
+  ): Promise<AgentTurnResponse> {
     const result = await this.run(EMPTY_AGENT_CONTEXT, { kind: "start", numeroDocumento }, correlationId);
-    if (result.output.kind !== "products") {
-      return { output: result.output, sessionId: null };
+    const documento = String(numeroDocumento);
+
+    if (result.output.kind === "products") {
+      const sessionId = randomUUID();
+      await this.sessions.create({
+        asesorEmail: owner.email,
+        context: result.context,
+        documento,
+        encontrado: true,
+        id: sessionId,
+        ownerUserId: owner.id,
+      });
+      return { output: result.output, sessionId };
     }
 
-    const sessionId = randomUUID();
-    await this.sessions.create(sessionId, ownerUserId, result.context);
-    return { output: result.output, sessionId };
+    if (result.output.kind === "not_found") {
+      await this.sessions.create({
+        asesorEmail: owner.email,
+        context: EMPTY_AGENT_CONTEXT,
+        documento,
+        encontrado: false,
+        id: randomUUID(),
+        ownerUserId: owner.id,
+      });
+    }
+
+    return { output: result.output, sessionId: null };
   }
 
   public async selectProduct(

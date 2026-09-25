@@ -48,6 +48,14 @@ export const routes: Routes = [
         canActivate: [adminPermissionGuard('products:read')],
         loadComponent: () => import('./features/admin/products.component').then((module) => module.ProductsComponent),
       },
+      {
+        path: 'consultas',
+        title: 'Consultas | Agente 360',
+        data: { heading: 'Consultas', subheading: 'Consultas de Cliente 360 por rango de fechas' },
+        canActivate: [adminPermissionGuard('reports:read')],
+        loadComponent: () =>
+          import('./features/admin/consultations-report.component').then((module) => module.ConsultationsReportComponent),
+      },
     ],
   },
   {
