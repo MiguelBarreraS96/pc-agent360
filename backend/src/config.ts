@@ -6,7 +6,8 @@ const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite";
 const DEFAULT_INACTIVITY_TIMEOUT_SECONDS = 900;
 const DEFAULT_CONECTA_SCOPE = "SrcServerCognitoConecta/ConectaApiScope";
 const DEFAULT_CONECTA_TOKEN_TIMEOUT_MS = 5000;
-const DEFAULT_CONECTA_GRAPHQL_TIMEOUT_MS = 15000;
+const DEFAULT_CONECTA_GRAPHQL_TIMEOUT_MS = 25000;
+const DEFAULT_CONECTA_GRAPHQL_TOTAL_BUDGET_MS = 45000;
 const DEFAULT_CONECTA_TOKEN_REFRESH_MARGIN_MS = 60000;
 const DEFAULT_CONECTA_BREAKER_FAILURE_THRESHOLD = 5;
 const DEFAULT_CONECTA_BREAKER_RECOVERY_MS = 30000;
@@ -41,6 +42,8 @@ export interface ConectaConfig {
   readonly xUserKey: string;
   readonly tokenTimeoutMs: number;
   readonly graphqlTimeoutMs: number;
+  /** Overall time budget for a `consultarCliente` call, including the single transient retry (Req 7.2). */
+  readonly graphqlTotalBudgetMs: number;
   readonly tokenRefreshMarginMs: number;
   readonly breakerFailureThreshold: number;
   readonly breakerRecoveryMs: number;
@@ -300,6 +303,11 @@ function parseConectaConfig(): ConectaConfig {
       "CONECTA_GRAPHQL_TIMEOUT_MS",
       process.env.CONECTA_GRAPHQL_TIMEOUT_MS,
       DEFAULT_CONECTA_GRAPHQL_TIMEOUT_MS,
+    ),
+    graphqlTotalBudgetMs: parseNumberWithDefault(
+      "CONECTA_GRAPHQL_TOTAL_BUDGET_MS",
+      process.env.CONECTA_GRAPHQL_TOTAL_BUDGET_MS,
+      DEFAULT_CONECTA_GRAPHQL_TOTAL_BUDGET_MS,
     ),
     tokenRefreshMarginMs: parseNumberWithDefault(
       "CONECTA_TOKEN_REFRESH_MARGIN_MS",

@@ -105,8 +105,12 @@ function toTitleCase(value: string | null | undefined): string | null {
 
 const NOT_FOUND_MESSAGE = 'No encontré información de Cliente 360 para esa cédula. Verifica el número e inténtalo de nuevo.';
 const START_ERROR_MESSAGE = 'No fue posible consultar Cliente 360 en este momento. Inténtalo de nuevo en unos minutos.';
+const UPSTREAM_SLOW_MESSAGE =
+  'Cliente 360 está respondiendo lento en este momento. Espera unos segundos e inténtalo de nuevo.';
 const SESSION_EXPIRED_MESSAGE = 'La sesión de la consulta expiró. Inicia una nueva consulta con la cédula.';
 const GENERIC_ERROR_MESSAGE = 'No fue posible obtener una respuesta del asistente. Inténtalo de nuevo.';
+/** Upstream statuses that mean Cliente 360 (or its circuit breaker) is momentarily slow/unavailable, not a hard failure. */
+const UPSTREAM_SLOW_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
 const CLIENT_FOUND_MESSAGE = 'Encontré al cliente. Elige un producto en la tarjeta "Producto" para preparar la venta.';
 const PITCH_READY_MESSAGE =
   'Listo. Revisa el resumen del clausulado y el guion sugerido en las tarjetas. Pregúntame lo que necesites o usa las acciones rápidas.';
@@ -356,8 +360,17 @@ export class AgentComponent implements OnInit {
   }
 
   private handleFailure(error: unknown, fallback: string): void {
-    const expired = error instanceof HttpErrorResponse && error.status === 404;
-    this.appendText('bot', expired ? SESSION_EXPIRED_MESSAGE : fallback);
+    if (error instanceof HttpErrorResponse && error.status === 404) {
+      this.appendText('bot', SESSION_EXPIRED_MESSAGE);
+      return;
+    }
+
+    if (error instanceof HttpErrorResponse && UPSTREAM_SLOW_STATUSES.has(error.status)) {
+      this.appendText('bot', UPSTREAM_SLOW_MESSAGE);
+      return;
+    }
+
+    this.appendText('bot', fallback);
   }
 
   private applyResponse(response: AgentTurnResponse): void {
