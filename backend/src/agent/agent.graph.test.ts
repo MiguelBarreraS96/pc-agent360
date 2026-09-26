@@ -121,9 +121,9 @@ function harness(options: { evidence?: readonly RagEvidenceItem[]; found?: boole
   const deps: AgentGraphDependencies = {
     catalog: {
       listProducts: async () => [
-        product("auto-1", "Seguro de Autos"),
-        product("hogar-1", "Seguro de Hogar"),
         product("vida-1", "Seguro de Vida"),
+        product("hogar-1", "Seguro de Hogar"),
+        product("auto-1", "Seguro de Autos"),
       ],
     },
     clausulado: { search: async () => ({ items: evidence }) },
@@ -157,15 +157,16 @@ describe("agent graph", () => {
     expect(result.context.profile).toBeNull();
   });
 
-  it("offers only catalog products the lead is apt for, recommended first, without leaking the document number", async () => {
+  it("offers the whole catalog with the recommended product first, without leaking the document number", async () => {
     const result = await harness().run(EMPTY_AGENT_CONTEXT, { kind: "start", numeroDocumento: 123456 });
 
     expect(result.output.kind).toBe("products");
     if (result.output.kind !== "products") {
       return;
     }
-    expect(result.output.products.map((candidate) => candidate.id)).toEqual(["auto-1"]);
+    expect(result.output.products.map((candidate) => candidate.id)).toEqual(["auto-1", "vida-1", "hogar-1"]);
     expect(result.output.products[0]).toMatchObject({ clausuladoDisponible: true, recommended: true });
+    expect(result.output.products.slice(1).every((candidate) => !candidate.recommended)).toBe(true);
     expect(result.output.profile).toMatchObject({ ageSegment: "adulto_mayor", edad: 52 });
     expect(JSON.stringify(result.context)).not.toContain("123456");
   });
@@ -212,10 +213,10 @@ describe("agent graph", () => {
     expect(output.brief.script.puntosClave).toEqual([{ factIds: ["F1"], text: "Cubre la pérdida total por hurto." }]);
   });
 
-  it("refuses products that were not suggested for the lead", async () => {
+  it("refuses products that were not offered to the advisor", async () => {
     const h = harness();
     const started = await h.run(EMPTY_AGENT_CONTEXT, { kind: "start", numeroDocumento: 123456 });
-    const { output } = await h.run(started.context, { kind: "select_product", productId: "hogar-1" });
+    const { output } = await h.run(started.context, { kind: "select_product", productId: "fuera-del-catalogo" });
 
     expect(output.kind).toBe("invalid_request");
     expect(h.llmCalls).toEqual([]);

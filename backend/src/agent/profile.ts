@@ -126,50 +126,95 @@ export function categoryOfProduct(productName: string): ProductCategory | null {
   return PRODUCT_CATEGORIES.find((category) => CATEGORY_KEYWORDS[category].test(key)) ?? null;
 }
 
-function isRecommendedProduct(productName: string, productoRecomendado: string | null): boolean {
-  if (productoRecomendado === null) {
-    return false;
-  }
+/** Words that carry no product meaning ("Seguro de Vida" vs the Cliente 360 code "VIDA_INDIVIDUAL"). */
+const NAME_STOPWORDS: ReadonlySet<string> = new Set(["seguro", "seguros", "plan", "poliza", "de", "del", "la", "el", "los", "las", "y", "para"]);
 
-  const recommended = normalizeKey(productoRecomendado);
-  const name = normalizeKey(productName);
-  if (recommended === "" || name === "") {
-    return false;
-  }
-
-  return name.includes(recommended) || recommended.includes(name);
+function meaningfulTokens(value: string): readonly string[] {
+  return normalizeKey(value)
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token !== "" && !NAME_STOPWORDS.has(token));
 }
 
-/** Intersect the catalog with what Cliente 360 says the lead can buy; recommended products come first. */
+/** Same word, tolerating plurals and truncations ("auto" / "autos"). */
+function tokensMatch(left: string, right: string): boolean {
+  return left.startsWith(right) || right.startsWith(left);
+}
+
+/**
+ * How well a catalog product matches Cliente 360's `productoRecomendado` (a code such as "VIDA_INDIVIDUAL"):
+ * every recommended word in the name beats a partial word overlap, which beats a mere category match; 0 = no match.
+ */
+function recommendationScore(productName: string, productoRecomendado: string | null): number {
+  if (productoRecomendado === null) {
+    return 0;
+  }
+
+  const recommendedTokens = meaningfulTokens(productoRecomendado);
+  const nameTokens = meaningfulTokens(productName);
+  if (recommendedTokens.length === 0 || nameTokens.length === 0) {
+    return 0;
+  }
+
+  const overlap = recommendedTokens.filter((token) => nameTokens.some((name) => tokensMatch(token, name))).length;
+  if (overlap === recommendedTokens.length) {
+    return 1_000 + overlap;
+  }
+  if (overlap > 0) {
+    return 100 + overlap;
+  }
+
+  const category = categoryOfProduct(productoRecomendado);
+  return category !== null && category === categoryOfProduct(productName) ? 1 : 0;
+}
+
+/** Index of the single catalog product that best matches the recommendation, or -1 when none does. */
+function recommendedProductIndex(catalog: readonly Product[], productoRecomendado: string | null): number {
+  let bestIndex = -1;
+  let bestScore = 0;
+  catalog.forEach((product, index) => {
+    const score = recommendationScore(product.name, productoRecomendado);
+    if (score > bestScore) {
+      bestIndex = index;
+      bestScore = score;
+    }
+  });
+
+  return bestIndex;
+}
+
+/**
+ * Offer the whole catalog, ordered by what Cliente 360 says about the lead: the recommended product first,
+ * then the ones the lead is apt for, then the rest (catalog order is kept within each group).
+ */
 export function resolveEligibleProducts(
   profile: ClienteProfile,
   catalog: readonly Product[],
 ): readonly EligibleProduct[] {
-  const eligible: EligibleProduct[] = [];
-
-  for (const product of catalog) {
+  const recommendedIndex = recommendedProductIndex(catalog, profile.productoRecomendado);
+  const ranked = catalog.map((product, index) => {
     const category = categoryOfProduct(product.name);
-    const recommended = isRecommendedProduct(product.name, profile.productoRecomendado);
+    const recommended = index === recommendedIndex;
     const aptForCategory = category !== null && profile.aptitudes[category] === true;
+    const reason = recommended
+      ? "Es el producto recomendado por Cliente 360 para este cliente."
+      : aptForCategory
+        ? `Cliente 360 indica que el cliente es apto para ${category}.`
+        : "Disponible en el catálogo.";
+    const rank = recommended ? 0 : aptForCategory ? 1 : 2;
 
-    if (!recommended && !aptForCategory) {
-      continue;
-    }
-
-    eligible.push({
+    const eligible: EligibleProduct = {
       category,
       clausuladoDisponible: product.rag.state === "active",
       icon: product.icon,
       id: product.id,
       name: product.name,
-      reason: recommended
-        ? "Es el producto recomendado por Cliente 360 para este cliente."
-        : `Cliente 360 indica que el cliente es apto para ${category ?? "este producto"}.`,
+      reason,
       recommended,
-    });
-  }
+    };
+    return { eligible, rank };
+  });
 
-  return eligible.sort((left, right) => Number(right.recommended) - Number(left.recommended));
+  return ranked.sort((left, right) => left.rank - right.rank).map(({ eligible }) => eligible);
 }
 
 const list = (items: readonly string[]): string => (items.length === 0 ? "ninguno registrado" : items.join(", "));

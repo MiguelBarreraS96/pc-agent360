@@ -314,16 +314,7 @@
                 @if (showProductPicker() || brief() === null) {
                   @if (products().length === 0) {
                     <p class="mt-3 text-[12.5px] text-ink/70">
-                      Cliente 360 encontró al cliente
-                      @if (aptitudes().length > 0) {
-                        y lo marca apto para
-                        @for (item of aptitudes(); track item.label) {
-                          @if (item.apt === true) {
-                            <b class="text-ink">{{ item.label.toLowerCase() }}</b>{{ ' ' }}
-                          }
-                        }
-                      }
-                      , pero ninguno de esos productos existe todavía en el catálogo. Créalo en Productos y carga su clausulado para poder ofrecérselo.
+                      Cliente 360 encontró al cliente, pero todavía no hay productos en el catálogo. Crea uno en Productos y carga su clausulado para poder ofrecérselo.
                     </p>
                   } @else {
                     <p class="mt-2 text-[12px] text-ink/50">Elige uno para preparar la venta:</p>
