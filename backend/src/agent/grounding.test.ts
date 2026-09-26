@@ -69,6 +69,13 @@ describe("numbersSupported", () => {
     const text = "Cubre hurto. Además ofrece 30 días de gracia. Consulta las condiciones.";
     expect(dropUnsupportedSentences(text, ["sin cifras"])).toBe("Cubre hurto. Consulta las condiciones.");
   });
+
+  it("keeps the Markdown structure while dropping unsupported sentences", () => {
+    const text = "### Coberturas\n\n- **Hurto** total. Paga 30 días.\n- Daños de **5.000.000**.\n1. Primer paso.\n\n\nFin.";
+    expect(dropUnsupportedSentences(text, ["valor 5.000.000"])).toBe(
+      "### Coberturas\n\n- **Hurto** total.\n- Daños de **5.000.000**.\n1. Primer paso.\n\nFin.",
+    );
+  });
 });
 
 describe("verifyFacts", () => {

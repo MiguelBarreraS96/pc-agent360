@@ -7,7 +7,9 @@ const MIN_EXTRACTIVE_SEGMENT_SCORE = 0.5;
 const MIN_QUOTE_CHARACTERS = 20;
 const NUMBER_PATTERN = /\d+(?:[.,]\d+)*/g;
 const LIST_MARKER_PATTERN = /^\s*\d+[.)]\s+/gm;
-const SENTENCE_SPLIT_PATTERN = /(?<=[.!?…])\s+/;
+const SENTENCE_SPLIT_PATTERN = /(?<=[.!?…])[ \t]+/;
+/** Leading Markdown block marker (heading, bullet, numbered item, quote) kept apart from the sentence filter. */
+const MARKDOWN_BLOCK_PREFIX_PATTERN = /^\s*(?:#{1,6}|[-*+]|\d+[.)]|>)\s+/;
 
 export interface EvidenceEntry {
   readonly content: string;
@@ -104,10 +106,25 @@ export function numbersSupported(text: string, sources: readonly string[]): bool
 
 /** Drop the sentences that state a number found in none of the sources; returns "" when nothing is left. */
 export function dropUnsupportedSentences(text: string, sources: readonly string[]): string {
+  // Work line by line so Markdown structure (headings, list items, blank lines between blocks) survives the filter.
   return text
-    .split(SENTENCE_SPLIT_PATTERN)
-    .filter((sentence) => numbersSupported(sentence, sources))
-    .join(" ")
+    .split("\n")
+    .flatMap((line) => {
+      if (line.trim() === "") {
+        return [""];
+      }
+
+      const prefix = MARKDOWN_BLOCK_PREFIX_PATTERN.exec(line)?.[0] ?? "";
+      const kept = line
+        .slice(prefix.length)
+        .split(SENTENCE_SPLIT_PATTERN)
+        .filter((sentence) => numbersSupported(sentence, sources))
+        .join(" ")
+        .trim();
+      return kept === "" ? [] : [`${prefix}${kept}`];
+    })
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 

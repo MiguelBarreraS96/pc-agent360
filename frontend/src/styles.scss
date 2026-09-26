@@ -590,6 +590,57 @@ textarea.field {
   box-shadow: 0 10px 24px -20px rgb(14 26 20 / 60%);
 }
 
+/* Markdown rendered inside the agent's chat replies. */
+.bot-markdown {
+  overflow-wrap: anywhere;
+
+  > * + * {
+    margin-top: 0.5rem;
+  }
+
+  h4 {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin-top: 0.75rem;
+  }
+
+  > h4:first-child {
+    margin-top: 0;
+  }
+
+  ul,
+  ol {
+    padding-left: 1.25rem;
+  }
+
+  ul {
+    list-style: disc;
+  }
+
+  ol {
+    list-style: decimal;
+  }
+
+  li + li {
+    margin-top: 0.25rem;
+  }
+
+  li::marker {
+    color: #00a94f;
+  }
+
+  strong {
+    font-weight: 700;
+  }
+
+  code {
+    background: rgb(14 26 20 / 6%);
+    border-radius: 4px;
+    font-size: 12px;
+    padding: 0 0.25rem;
+  }
+}
+
 .bubble-me {
   background: linear-gradient(120deg, #00a94f, #0f9e4d);
   color: #ffffff;

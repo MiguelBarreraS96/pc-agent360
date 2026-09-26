@@ -26,6 +26,7 @@ import type {
   FastActionGroup,
 } from '../../core/api.models';
 import { nonBlankValidator } from '../../core/input-normalization';
+import { renderMarkdown } from '../../core/markdown';
 
 type AgentStage = 'intro' | 'chat';
 type MobileTab = 'chat' | 'panel';
@@ -219,6 +220,11 @@ export class AgentComponent implements OnInit {
     return text
       .replace(LEAD_PLACEHOLDER, lead ?? '[Nombre del Lead]')
       .replace(ADVISOR_PLACEHOLDER, advisor ?? '[Nombre del Asesor]');
+  }
+
+  /** Bot replies arrive as Markdown; render them (escaped) after filling in the name placeholders. */
+  renderBotText(text: string): string {
+    return renderMarkdown(this.personalize(text));
   }
 
   titleCase(value: string | null | undefined): string {
