@@ -4,6 +4,7 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { ApiErrorService } from '../../core/api-error.service';
 import { ProductDto, ProductRagAgentResponse } from '../../core/api.models';
 import { nonBlankValidator } from '../../core/input-normalization';
+import { highlightsToMarkdown, renderMarkdown } from '../../core/markdown';
 import { ProductsApiService } from '../../core/products-api.service';
 
 const MAX_QUERY_LENGTH = 1_000;
@@ -30,6 +31,11 @@ export class ProductRagAgentComponent {
   readonly form = this.formBuilder.group({
     query: this.formBuilder.control('', [Validators.required, Validators.maxLength(MAX_QUERY_LENGTH), nonBlankValidator]),
   });
+
+  /** Render the agent answer, Discovery Engine summary or a snippet (Markdown and `<b>` highlights) as safe HTML. */
+  renderRich(text: string): string {
+    return renderMarkdown(highlightsToMarkdown(text));
+  }
 
   /** Close the mini agent. */
   close(): void {

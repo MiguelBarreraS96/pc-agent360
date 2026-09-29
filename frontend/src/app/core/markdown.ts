@@ -8,6 +8,15 @@ const HTML_ESCAPES: Readonly<Record<string, string>> = {
 const HEADING_PATTERN = /^(#{1,6})\s+(.*)$/;
 const BULLET_PATTERN = /^[-*+]\s+(.*)$/;
 const ORDERED_PATTERN = /^\d+[.)]\s+(.*)$/;
+const RULE_PATTERN = /^([-*_])(\s*\1){2,}$/;
+const HTML_ENTITIES: Readonly<Record<string, string>> = {
+  amp: '&',
+  apos: "'",
+  gt: '>',
+  lt: '<',
+  nbsp: ' ',
+  quot: '"',
+};
 
 type ListKind = 'ol' | 'ul';
 
@@ -19,6 +28,7 @@ function escapeHtml(text: string): string {
 function renderInline(text: string): string {
   return escapeHtml(text)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/__(.+?)__/g, '<strong>$1</strong>')
     .replace(/(^|[^*])\*(?!\s)(.+?)(?<!\s)\*(?!\*)/g, '$1<em>$2</em>');
@@ -55,6 +65,12 @@ export function renderMarkdown(markdown: string): string {
 
   for (const rawLine of markdown.replace(/\r\n?/g, '\n').split('\n')) {
     const line = rawLine.trim();
+    if (RULE_PATTERN.test(line)) {
+      flushParagraph();
+      closeList();
+      html.push('<hr>');
+      continue;
+    }
     const heading = HEADING_PATTERN.exec(line);
     const bullet = BULLET_PATTERN.exec(line);
     const ordered = ORDERED_PATTERN.exec(line);
@@ -79,4 +95,23 @@ export function renderMarkdown(markdown: string): string {
   flushParagraph();
   closeList();
   return html.join('');
+}
+
+/**
+ * Turn Discovery Engine highlight HTML (`<b>`, `<i>`, `<br>`, entities) into the Markdown subset above.
+ * Tags are dropped before entities are decoded, so decoded `<`/`>` stay literal text and are escaped on render.
+ */
+export function highlightsToMarkdown(text: string): string {
+  return text
+    .replace(/<\s*br\s*\/?>/gi, '\n')
+    .replace(/<\s*\/?\s*(b|strong)\s*>/gi, '**')
+    .replace(/<\s*\/?\s*(i|em)\s*>/gi, '*')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&(#\d+|#x[\da-f]+|[a-z]+);/gi, (entity, code: string) => {
+      if (code.startsWith('#')) {
+        const value = code[1]?.toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+        return Number.isFinite(value) && value > 0 && value <= 0x10ffff ? String.fromCodePoint(value) : entity;
+      }
+      return HTML_ENTITIES[code.toLowerCase()] ?? entity;
+    });
 }

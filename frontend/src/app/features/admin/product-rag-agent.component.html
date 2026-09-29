@@ -66,13 +66,13 @@
               {{ agentResult.usedRag ? 'Con evidencia RAG' : 'Sin evidencia' }}
             </span>
           </div>
-          <p class="text-[13px] leading-relaxed text-ink/75 whitespace-pre-wrap">{{ agentResult.answer }}</p>
+          <div class="bot-markdown text-[13px] leading-relaxed text-ink/75" [innerHTML]="renderRich(agentResult.answer)"></div>
         </article>
 
         @if (agentResult.probe.summary; as summary) {
           <article class="rounded-[18px] border border-ink/10 bg-white/45 p-4">
             <h4 class="font-semibold text-[13px] text-ink mb-2">Resumen de Discovery Engine</h4>
-            <p class="text-[12.5px] leading-relaxed text-ink/65 whitespace-pre-wrap">{{ summary }}</p>
+            <div class="bot-markdown text-[12.5px] leading-relaxed text-ink/65" [innerHTML]="renderRich(summary)"></div>
           </article>
         }
 
@@ -85,7 +85,7 @@
             <article class="glass-soft rounded-[16px] p-3.5">
               <p class="text-[12.5px] font-semibold text-ink">{{ evidence.title ?? 'Documento sin título' }}</p>
               @if (evidence.snippet; as snippet) {
-                <p class="text-[12px] leading-relaxed text-ink/65 mt-1.5 whitespace-pre-wrap">{{ snippet }}</p>
+                <div class="bot-markdown text-[12px] leading-relaxed text-ink/65 mt-1.5" [innerHTML]="renderRich(snippet)"></div>
               } @else {
                 <p class="text-[12px] text-ink/40 mt-1.5">No se obtuvo un fragmento utilizable para este resultado.</p>
               }
