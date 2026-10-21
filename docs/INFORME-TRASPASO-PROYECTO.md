@@ -50,7 +50,7 @@ Además hay un módulo **administrativo** para gestionar usuarios autorizados (w
 | Capa | Tecnología |
 | --- | --- |
 | Backend | Node.js ≥ 20, Express 4.21, TypeScript 5.7, Zod, Helmet, CORS, Busboy (multipart) |
-| Agente IA | LangGraph (`@langchain/langgraph` 1.4) + `@google/genai` (Gemini en Vertex AI, modelo por defecto `gemini-2.5-flash-lite`) |
+| Agente IA | LangGraph (`@langchain/langgraph` 1.4) + `@google/genai` (Gemini en Vertex AI, modelo por defecto `gemini-3.1-flash`) |
 | RAG | Vertex AI Search / Discovery Engine (`@google-cloud/discoveryengine`) + Cloud Storage |
 | Auth | Firebase Auth (Email Link) + Firebase Admin; sesiones propias en Firestore |
 | Tests backend | Jest + ts-jest + supertest + fast-check |
@@ -362,7 +362,7 @@ Estado verificado al escribir este informe: `tsc --noEmit` del backend sin error
 | Qué productos se sugieren | `backend/src/agent/profile.ts` → `resolveEligibleProducts` / `CATEGORY_KEYWORDS` |
 | Qué tan estricta es la verificación anti-alucinación | `backend/src/agent/grounding.ts` |
 | El flujo/nodos del agente | `backend/src/agent/agent.graph.ts` (+ tests en `agent.graph.test.ts`) |
-| El modelo de Gemini | Variable `GEMINI_MODEL` (y `GEMINI_LOCATION`) |
+| El modelo de Gemini | Variable `GEMINI_MODEL` (y `GEMINI_LOCATION`, `global` por defecto) |
 | Los campos que se piden a Conecta | `backend/src/cliente360/graphql-client.ts`, `conecta-types.ts`, `cliente360-dto.ts`, `pii-masking.ts` |
 | Un nuevo permiso | `backend/src/access/access.models.ts` + `scripts/seed-firestore.mjs` + guards del frontend |
 | Un nuevo endpoint | router del módulo + `app.ts` (montaje) + `composition.ts` (dependencias) + `openapi.yaml` |

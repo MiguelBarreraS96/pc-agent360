@@ -1,8 +1,8 @@
 const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_PORT = 3000;
 const DEFAULT_FIRESTORE_DATABASE_ID = "(default)";
-const DEFAULT_GEMINI_LOCATION = "us-central1";
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite";
+const DEFAULT_GEMINI_LOCATION = "global";
+const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash";
 const DEFAULT_INACTIVITY_TIMEOUT_SECONDS = 900;
 const DEFAULT_CONECTA_SCOPE = "SrcServerCognitoConecta/ConectaApiScope";
 const DEFAULT_CONECTA_TOKEN_TIMEOUT_MS = 5000;
@@ -223,10 +223,10 @@ function parseGeminiModel(rawModel: string | undefined): string {
   return model;
 }
 
-/** Validate the Vertex AI region used for Gemini generateContent calls; unlike Discovery Engine, "global" is not supported. */
+/** Validate the Vertex AI location used for Gemini generateContent calls; "global" is the default and regional ids are also accepted. */
 function parseGeminiLocation(rawLocation: string | undefined): string {
   const location = rawLocation?.trim() || DEFAULT_GEMINI_LOCATION;
-  if (location === "global" || !/^[a-z0-9-]{2,30}$/.test(location)) {
+  if (!/^[a-z0-9-]{2,30}$/.test(location)) {
     throw new Error("Invalid GEMINI_LOCATION configuration.");
   }
 

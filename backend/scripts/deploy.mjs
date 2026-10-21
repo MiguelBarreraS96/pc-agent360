@@ -159,9 +159,9 @@ function validateGeminiModel(value) {
   }
 }
 
-/** Validate the Gemini (Vertex AI) region; unlike DISCOVERY_ENGINE_LOCATION, "global" is not supported. */
+/** Validate the Gemini (Vertex AI) location; "global" is the default and regional ids are also accepted. */
 function validateGeminiLocation(value) {
-  if (value === 'global' || !/^[a-z0-9-]{2,30}$/.test(value)) {
+  if (!/^[a-z0-9-]{2,30}$/.test(value)) {
     throw new Error('GEMINI_LOCATION is invalid.');
   }
 }

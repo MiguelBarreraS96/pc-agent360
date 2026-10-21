@@ -1,11 +1,12 @@
-import type { Content, GoogleGenAI } from "@google/genai";
+import { type Content, type GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 import { ChatGenerationError } from "./chat.errors";
 import type { ChatTurn } from "./chat.models";
 
-const TEMPERATURE = 0.4;
-const MAX_OUTPUT_TOKENS = 1_024;
+const MAX_OUTPUT_TOKENS = 2_048;
 const GENERATION_TIMEOUT_MILLISECONDS = 15_000;
+// Gemini 3 thinks at HIGH by default; LOW keeps latency bounded and leaves the output budget for the answer.
+const THINKING_CONFIG = { thinkingLevel: ThinkingLevel.LOW };
 
 const SYSTEM_INSTRUCTION_PREAMBLE = [
   "Eres un asistente interno que responde preguntas de empleados usando EXCLUSIVAMENTE la evidencia",
@@ -38,7 +39,7 @@ export class GeminiGateway {
           httpOptions: { timeout: GENERATION_TIMEOUT_MILLISECONDS },
           maxOutputTokens: MAX_OUTPUT_TOKENS,
           systemInstruction: buildSystemInstruction(input.evidence),
-          temperature: TEMPERATURE,
+          thinkingConfig: THINKING_CONFIG,
         },
         contents: buildContents(input.history, input.question),
         model: this.model,
@@ -57,7 +58,7 @@ export class GeminiGateway {
         config: {
           httpOptions: { timeout: GENERATION_TIMEOUT_MILLISECONDS },
           maxOutputTokens: MAX_OUTPUT_TOKENS,
-          temperature: TEMPERATURE,
+          thinkingConfig: THINKING_CONFIG,
         },
         contents: [{ parts: [{ text: question }], role: "user" }],
         model: this.model,

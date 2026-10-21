@@ -1,14 +1,18 @@
-import type { Content, GoogleGenAI } from "@google/genai";
+import { type Content, type GenerateContentResponse, type GoogleGenAI, ThinkingLevel } from "@google/genai";
 import type { ZodType, ZodTypeDef } from "zod";
 
 import { ChatGenerationError } from "../chat/chat.errors";
 
 import type { AgentTurn } from "./agent.models";
 
-const TEMPERATURE = 0.3;
 const MAX_OUTPUT_TOKENS = 8_192;
 const GENERATION_TIMEOUT_MILLISECONDS = 30_000;
 const MAX_JSON_ATTEMPTS = 2;
+// Gemini 3 thinks at HIGH by default; LOW keeps latency inside the timeout and leaves the output budget for the answer.
+const THINKING_CONFIG = { thinkingLevel: ThinkingLevel.LOW };
+
+/** Gemini answered without text; kept distinct so JSON generation can retry it like a malformed answer. */
+class EmptyResponseError extends Error {}
 
 export interface AgentTextRequest {
   readonly history?: readonly AgentTurn[];
@@ -37,16 +41,23 @@ export class GeminiAgentLlm implements AgentLlm {
     return this.generate(request, false);
   }
 
-  /** Ask for JSON, validate it against the schema, and retry once when the model returns something malformed. */
+  /** Ask for JSON, validate it against the schema, and retry once when the model returns something malformed or empty. */
   public async generateJson<Output>(request: AgentJsonRequest<Output>): Promise<Output> {
     let lastError: unknown = new Error("No JSON attempt was made.");
 
     for (let attempt = 0; attempt < MAX_JSON_ATTEMPTS; attempt += 1) {
-      const raw = await this.generate(request, true);
       try {
-        return parseJson(raw, request.schema);
+        return parseJson(await this.generate(request, true), request.schema);
       } catch (error: unknown) {
-        lastError = error;
+        if (error instanceof ChatGenerationError) {
+          // Only an empty response is worth another attempt; timeouts and API errors surface immediately.
+          if (!(error.cause instanceof EmptyResponseError)) {
+            throw error;
+          }
+          lastError = error.cause;
+        } else {
+          lastError = error;
+        }
       }
     }
 
@@ -60,7 +71,7 @@ export class GeminiAgentLlm implements AgentLlm {
           httpOptions: { timeout: GENERATION_TIMEOUT_MILLISECONDS },
           maxOutputTokens: MAX_OUTPUT_TOKENS,
           systemInstruction: request.system,
-          temperature: TEMPERATURE,
+          thinkingConfig: THINKING_CONFIG,
           ...(asJson ? { responseMimeType: "application/json" } : {}),
         },
         contents: buildContents(request.history ?? [], request.prompt),
@@ -69,7 +80,7 @@ export class GeminiAgentLlm implements AgentLlm {
 
       const text = response.text?.trim();
       if (text === undefined || text === "") {
-        throw new Error("Gemini returned an empty response.");
+        throw new EmptyResponseError(describeEmptyResponse(response));
       }
 
       return text;
@@ -77,6 +88,16 @@ export class GeminiAgentLlm implements AgentLlm {
       throw error instanceof ChatGenerationError ? error : new ChatGenerationError(error);
     }
   }
+}
+
+/** Explain an empty answer with the finish reason and block reason only; never the prompt or model content. */
+function describeEmptyResponse(response: GenerateContentResponse): string {
+  const details = [
+    response.candidates?.[0]?.finishReason === undefined ? undefined : `finishReason=${response.candidates[0].finishReason}`,
+    response.promptFeedback?.blockReason === undefined ? undefined : `blockReason=${response.promptFeedback.blockReason}`,
+  ].filter((detail) => detail !== undefined);
+
+  return `Gemini returned an empty response${details.length === 0 ? "" : ` (${details.join(", ")})`}.`;
 }
 
 function buildContents(history: readonly AgentTurn[], prompt: string): Content[] {
