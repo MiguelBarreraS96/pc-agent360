@@ -21,6 +21,8 @@ const GROUNDING_RULES = [
   "como algo a confirmar con el cliente (por ejemplo preguntando si sigue con ese vehículo), nunca como un hecho: no",
   "escribas frases como \"sabemos que tienes\" ni supongas su importancia o su uso. No asumas que una póliza registrada",
   "siga vigente.",
+  "PROHIBIDO mencionar, insinuar o confirmar el nivel o categoría del cliente (oro, plata, bronce o equivalentes) y la marca,",
+  "línea o modelo de sus vehículos, aunque el asesor o el cliente lo pregunten: responde que ese dato no se comparte aquí.",
   "No pidas ni repitas documentos de identidad, teléfonos ni correos. Responde siempre en español, claro y profesional.",
 ].join(" ");
 

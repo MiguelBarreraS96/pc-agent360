@@ -19,11 +19,14 @@ export const FACT_TOPICS = [
 ] as const;
 export type FactTopic = (typeof FACT_TOPICS)[number];
 
+/** Vehicle as the agent sees it: never the brand, line or model (nor the plate). */
+export type AgentVehicle = Pick<VehiculoDTO, "tipo" | "uso">;
+
 export type AptitudeFlags = Readonly<Record<ProductCategory, boolean | null>>;
 
 /**
  * Lead profile derived from Cliente 360. It is persisted and sent to the model, so it never carries the
- * document number, name, phones, e-mails, addresses, plates or policy numbers.
+ * customer tier (CLV level), vehicle brand/line/model, document number, name, phones, e-mails, addresses, plates or policy numbers.
  */
 export interface ClienteProfile {
   readonly actividadEconomica: string | null;
@@ -32,7 +35,6 @@ export interface ClienteProfile {
   readonly antiguedad: number | null;
   readonly categoriaIngresos: string | null;
   readonly ciudad: string | null;
-  readonly clv: string | null;
   readonly departamento: string | null;
   readonly edad: number | null;
   readonly estadoCliente: string | null;
@@ -47,7 +49,7 @@ export interface ClienteProfile {
   readonly sectorEconomico: string | null;
   readonly siniestros: number;
   readonly tipoPersona: string | null;
-  readonly vehiculos: readonly VehiculoDTO[];
+  readonly vehiculos: readonly AgentVehicle[];
 }
 
 /** Identity data shown only to the advisor: it is neither persisted nor sent to the model. */

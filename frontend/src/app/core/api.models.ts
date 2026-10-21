@@ -172,9 +172,6 @@ export type AgeSegment = 'joven' | 'adulto_joven' | 'adulto' | 'adulto_mayor' | 
 
 /** Lead attributes derived from Cliente 360; the document number and phones are never included. */
 export interface AgentVehicleDto {
-  readonly linea: string | null;
-  readonly marca: string | null;
-  readonly modelo: number | string | null;
   readonly tipo: string | null;
   readonly uso: string | null;
 }
@@ -192,7 +189,6 @@ export interface AgentProfileDto {
   readonly antiguedad: number | null;
   readonly categoriaIngresos: string | null;
   readonly ciudad: string | null;
-  readonly clv: string | null;
   readonly departamento: string | null;
   readonly edad: number | null;
   readonly estadoCliente: string | null;

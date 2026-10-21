@@ -194,7 +194,12 @@ describe("agent graph", () => {
     expect(started.output).toMatchObject({ client: { nombreCompleto: CLIENT_NAME, segmentoBanco: "INCLUSION" }, kind: "products" });
     expect(JSON.stringify(selected.context)).not.toContain("MARIA");
     expect(prompts.join("\n")).not.toContain("MARIA");
-    expect(prompts.join("\n")).toContain("HYUNDAI ACCENT [6] 2023");
+    const sent = `${prompts.join("\n")}\n${JSON.stringify(started)}\n${JSON.stringify(selected.context)}`;
+    for (const hidden of ["HYUNDAI", "ACCENT", "2023", "Alto"]) {
+      expect(sent).not.toContain(hidden);
+    }
+    expect(prompts.join("\n")).toContain("vehículo (AUTOMOVIL, PARTICULAR FAMILIAR)");
+    expect(prompts.join("\n")).toContain("PROHIBIDO mencionar");
     expect(prompts.join("\n")).toContain("autos: Clásico");
   });
 

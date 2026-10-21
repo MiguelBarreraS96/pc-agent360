@@ -1,9 +1,10 @@
-import type { ClienteResponseDTO, InmuebleDTO, VehiculoDTO } from "../cliente360/cliente360-dto";
+import type { ClienteResponseDTO, InmuebleDTO } from "../cliente360/cliente360-dto";
 import type { Product } from "../products/products.models";
 
 import {
   PRODUCT_CATEGORIES,
   type AgeSegment,
+  type AgentVehicle,
   type AptitudeFlags,
   type ClienteDisplay,
   type ClienteProfile,
@@ -96,7 +97,6 @@ export function buildProfile(cliente: ClienteResponseDTO): ClienteProfile {
     antiguedad: cliente.cliente360.antiguedad,
     categoriaIngresos: cliente.cliente360.categoriaIngresos,
     ciudad: cliente.cliente360.ciudad ?? cliente.demografica.municipio,
-    clv: cliente.cliente360.clv,
     departamento: cliente.cliente360.departamento ?? cliente.demografica.departamento,
     edad,
     estadoCliente: cliente.estadoCliente,
@@ -111,7 +111,7 @@ export function buildProfile(cliente: ClienteResponseDTO): ClienteProfile {
     sectorEconomico: cliente.cliente360.sectorEconomico,
     siniestros: cliente.siniestros,
     tipoPersona: cliente.tipoPersona,
-    vehiculos: cliente.vehiculos,
+    vehiculos: cliente.vehiculos.map(({ tipo, uso }) => ({ tipo, uso })),
   };
 }
 
@@ -219,10 +219,9 @@ export function resolveEligibleProducts(
 
 const list = (items: readonly string[]): string => (items.length === 0 ? "ninguno registrado" : items.join(", "));
 
-function describeVehicle(vehicle: VehiculoDTO): string {
-  const name = [vehicle.marca, vehicle.linea, vehicle.modelo].filter((part) => part !== null && part !== "").join(" ");
+function describeVehicle(vehicle: AgentVehicle): string {
   const traits = [vehicle.tipo, vehicle.uso].filter((part) => part !== null && part !== "").join(", ");
-  return traits === "" ? name : `${name} (${traits})`;
+  return traits === "" ? "vehículo" : `vehículo (${traits})`;
 }
 
 function describeProperty(property: InmuebleDTO): string {
@@ -245,7 +244,6 @@ export function describeProfile(profile: ClienteProfile): string {
     `- Ocupación: ${value(profile.ocupacion)}; profesión: ${value(profile.profesion)}; actividad económica: ${value(profile.actividadEconomica)}`,
     `- Categoría de ingresos: ${value(profile.categoriaIngresos)}`,
     `- Antigüedad como cliente (valor tal cual lo reporta Cliente 360, unidad no especificada): ${value(profile.antiguedad)}`,
-    `- Valor del cliente (CLV): ${value(profile.clv)}`,
     `- Productos que ya tiene con el grupo: ${list(profile.productosActuales)}`,
     `- Producto recomendado por Cliente 360: ${value(profile.productoRecomendado)}`,
     `- Próximos productos sugeridos por Cliente 360, en orden de prioridad: ${list(profile.productosSugeridos)}`,

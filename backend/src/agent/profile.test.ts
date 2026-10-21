@@ -31,7 +31,6 @@ function profile(productoRecomendado: string | null): ClienteProfile {
     aptitudes: { autos: true, hogar: false, salud: null, vida: null },
     categoriaIngresos: null,
     ciudad: null,
-    clv: null,
     departamento: null,
     edad: 40,
     estadoCliente: null,
