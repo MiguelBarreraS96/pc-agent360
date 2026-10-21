@@ -4,7 +4,8 @@ import type { RagEvidenceItem } from "../rag/discovery-engine.gateway";
 
 import type { AgentLlm } from "./agent-llm";
 import { createAgentGraph, type AgentGraphDependencies } from "./agent.graph";
-import { EMPTY_AGENT_CONTEXT, type AgentContext, type AgentInput, type AgentOutput } from "./agent.models";
+import { EMPTY_AGENT_CONTEXT, FACT_TOPICS, type AgentContext, type AgentInput, type AgentOutput } from "./agent.models";
+import { extractionPrompt } from "./prompts";
 
 const CLAUSE =
   "El amparo de hurto cubre la pérdida total del vehículo cuando es hurtado, con una vigencia de 12 meses.";
@@ -245,6 +246,38 @@ describe("agent graph", () => {
 
     expect(output.kind).toBe("no_clausulado");
     expect(h.llmCalls).toEqual(["facts"]);
+  });
+
+  it("normalizes model-written topics and drops only the facts whose topic is unknown", async () => {
+    // verifyFacts drops repeated quotes, so each fact quotes a different part of the clause.
+    const quotes = ["El amparo de hurto cubre", "la pérdida total del vehículo", "cuando es hurtado, con", "una vigencia de 12 meses", "del vehículo cuando es hurtado"];
+    const fact = (topic: string, index: number) => ({ claim: "Cubre el hurto", evidence: [1], quote: quotes[index], topic });
+    const h = harness({
+      llm: { facts: { facts: ["reclamación", "Edades", "Valor asegurado", "clima", "coberturas"].map(fact) } },
+    });
+    const started = await h.run(EMPTY_AGENT_CONTEXT, { kind: "start", numeroDocumento: 123456 });
+    const { output } = await h.run(started.context, { kind: "select_product", productId: "auto-1" });
+
+    expect(output.kind).toBe("pitch");
+    if (output.kind !== "pitch") {
+      return;
+    }
+    expect(output.brief.facts.map((verified) => verified.topic)).toEqual([
+      "reclamacion",
+      "requisitos",
+      "valor_y_pago",
+      "coberturas",
+    ]);
+  });
+
+  it("asks the model for the exact topic keys only", () => {
+    const prompt = extractionPrompt("Seguro de Autos");
+
+    for (const topic of FACT_TOPICS) {
+      expect(prompt).toContain(topic);
+    }
+    expect(prompt).not.toContain("edades");
+    expect(prompt).not.toContain("reclamación");
   });
 
   it("requires a selected product before messages and fast actions", async () => {

@@ -21,6 +21,8 @@ export interface AgentTextRequest {
 }
 
 export interface AgentJsonRequest<Output> extends AgentTextRequest {
+  /** JSON Schema Gemini should constrain its output to; the zod `schema` still validates the result. */
+  readonly responseJsonSchema?: unknown;
   readonly schema: ZodType<Output, ZodTypeDef, unknown>;
 }
 
@@ -47,7 +49,7 @@ export class GeminiAgentLlm implements AgentLlm {
 
     for (let attempt = 0; attempt < MAX_JSON_ATTEMPTS; attempt += 1) {
       try {
-        return parseJson(await this.generate(request, true), request.schema);
+        return parseJson(await this.generate(request, true, request.responseJsonSchema), request.schema);
       } catch (error: unknown) {
         if (error instanceof ChatGenerationError) {
           // Only an empty response is worth another attempt; timeouts and API errors surface immediately.
@@ -64,7 +66,7 @@ export class GeminiAgentLlm implements AgentLlm {
     throw new ChatGenerationError(lastError);
   }
 
-  private async generate(request: AgentTextRequest, asJson: boolean): Promise<string> {
+  private async generate(request: AgentTextRequest, asJson: boolean, responseJsonSchema?: unknown): Promise<string> {
     try {
       const response = await this.client.models.generateContent({
         config: {
@@ -73,6 +75,7 @@ export class GeminiAgentLlm implements AgentLlm {
           systemInstruction: request.system,
           thinkingConfig: THINKING_CONFIG,
           ...(asJson ? { responseMimeType: "application/json" } : {}),
+          ...(responseJsonSchema === undefined ? {} : { responseJsonSchema }),
         },
         contents: buildContents(request.history ?? [], request.prompt),
         model: this.model,

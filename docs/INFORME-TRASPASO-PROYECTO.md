@@ -50,7 +50,7 @@ Además hay un módulo **administrativo** para gestionar usuarios autorizados (w
 | Capa | Tecnología |
 | --- | --- |
 | Backend | Node.js ≥ 20, Express 4.21, TypeScript 5.7, Zod, Helmet, CORS, Busboy (multipart) |
-| Agente IA | LangGraph (`@langchain/langgraph` 1.4) + `@google/genai` (Gemini en Vertex AI, modelo por defecto `gemini-3.1-flash`) |
+| Agente IA | LangGraph (`@langchain/langgraph` 1.4) + `@google/genai` (Gemini en Vertex AI, modelo por defecto `gemini-3.1-flash-lite`) |
 | RAG | Vertex AI Search / Discovery Engine (`@google-cloud/discoveryengine`) + Cloud Storage |
 | Auth | Firebase Auth (Email Link) + Firebase Admin; sesiones propias en Firestore |
 | Tests backend | Jest + ts-jest + supertest + fast-check |

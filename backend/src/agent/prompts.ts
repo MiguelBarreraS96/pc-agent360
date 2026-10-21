@@ -32,6 +32,8 @@ export function extractionSystem(productName: string, entries: readonly Evidence
     GROUNDING_RULES,
     `Tarea: extraer del clausulado del producto "${productName}" los hechos relevantes para venderlo.`,
     `Temas posibles: ${FACT_TOPICS.join(", ")}.`,
+    'El campo "topic" debe ser EXACTAMENTE uno de esos valores, escrito literalmente (sin tildes ni variantes): por',
+    'ejemplo, la información sobre edades va en "requisitos" y la de siniestros en "reclamacion".',
     "Cada hecho debe incluir una CITA: un fragmento copiado LITERALMENTE (mínimo 20 caracteres) de la evidencia",
     "indicada, sin corregir ni resumir. La afirmación puede parafrasear la cita, pero cualquier número que contenga",
     "debe aparecer tal cual en la cita. Descarta lo que no puedas respaldar con una cita literal.",
@@ -44,7 +46,7 @@ export function extractionSystem(productName: string, entries: readonly Evidence
 }
 
 export function extractionPrompt(productName: string): string {
-  return `Extrae los hechos verificables del clausulado de "${productName}" (coberturas, exclusiones, requisitos y edades, vigencia, pago y valor asegurado, reclamación y beneficios).`;
+  return `Extrae los hechos verificables del clausulado de "${productName}" para estos temas: ${FACT_TOPICS.join(", ")}. Usa esos nombres tal cual en "topic". Los requisitos incluyen las condiciones de ingreso y valor_y_pago incluye el valor asegurado.`;
 }
 
 function describeFacts(facts: readonly VerifiedFact[]): string {

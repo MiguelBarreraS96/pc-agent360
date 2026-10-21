@@ -18,7 +18,7 @@ function createLlm(responses: readonly unknown[]): { generateContent: jest.Mock;
     }
   }
   const client = { models: { generateContent } } as unknown as GoogleGenAI;
-  return { generateContent, llm: new GeminiAgentLlm(client, "gemini-3.1-flash") };
+  return { generateContent, llm: new GeminiAgentLlm(client, "gemini-3.1-flash-lite") };
 }
 
 describe("GeminiAgentLlm", () => {
@@ -78,5 +78,18 @@ describe("GeminiAgentLlm", () => {
 
     await expect(llm.generateJson(request)).resolves.toEqual({ value: "ok" });
     expect(generateContent).toHaveBeenCalledTimes(2);
+  });
+
+  it("forwards responseJsonSchema only when given", async () => {
+    const { generateContent, llm } = createLlm([{ text: '{"value":"a"}' }, { text: '{"value":"b"}' }]);
+    const responseJsonSchema = { properties: { value: { type: "string" } }, type: "object" };
+
+    await llm.generateJson({ ...request, responseJsonSchema });
+    await llm.generateJson(request);
+
+    const [withSchema, withoutSchema] = generateContent.mock.calls.map((call) => call[0].config);
+    expect(withSchema).toMatchObject({ responseJsonSchema, responseMimeType: "application/json" });
+    expect(withoutSchema).toMatchObject({ responseMimeType: "application/json" });
+    expect(withoutSchema).not.toHaveProperty("responseJsonSchema");
   });
 });

@@ -15,6 +15,7 @@ import {
   type AgentOutput,
   type AgentTurn,
   type ClienteDisplay,
+  type FactTopic,
   type ProductBrief,
   type SalesScript,
   type VerifiedFact,
@@ -74,6 +75,40 @@ export interface AgentGraphDependencies {
   readonly llm: AgentLlm;
 }
 
+/** Spellings the model has been seen to use instead of the exact topic keys. */
+const TOPIC_SYNONYMS: Readonly<Record<string, FactTopic>> = {
+  beneficio: "beneficios",
+  cobertura: "coberturas",
+  edad: "requisitos",
+  edades: "requisitos",
+  exclusion: "exclusiones",
+  pago: "valor_y_pago",
+  pago_y_valor: "valor_y_pago",
+  pago_y_valor_asegurado: "valor_y_pago",
+  precio: "valor_y_pago",
+  prima: "valor_y_pago",
+  reclamaciones: "reclamacion",
+  requisito: "requisitos",
+  requisitos_y_edades: "requisitos",
+  siniestro: "reclamacion",
+  siniestros: "reclamacion",
+  valor: "valor_y_pago",
+  valor_asegurado: "valor_y_pago",
+};
+
+/** Map a model-written topic to a valid one (ignoring case, accents, spaces and hyphens), or null when unknown. */
+function normalizeTopic(raw: string): FactTopic | null {
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[\s-]+/g, "_");
+
+  return FACT_TOPICS.find((topic) => topic === key) ?? TOPIC_SYNONYMS[key] ?? null;
+}
+
+// The model sometimes invents topics; one bad topic drops that fact only, never the whole response.
 const factsSchema = z.object({
   facts: z
     .array(
@@ -83,11 +118,35 @@ const factsSchema = z.object({
           .union([z.number().int(), z.array(z.number().int()).min(1)])
           .transform((value): readonly number[] => (Array.isArray(value) ? value : [value])),
         quote: z.string().min(1).max(1_500),
-        topic: z.enum(FACT_TOPICS),
+        topic: z.string().transform(normalizeTopic),
       }),
     )
-    .max(40),
+    .max(40)
+    .transform((facts) =>
+      facts.flatMap(({ topic, ...fact }) => (topic === null ? [] : [{ ...fact, topic }])),
+    ),
 });
+
+/** Response schema sent to Gemini so it constrains `topic` to the enum; zod above stays the final validator. */
+const FACTS_JSON_SCHEMA = {
+  properties: {
+    facts: {
+      items: {
+        properties: {
+          claim: { type: "string" },
+          evidence: { type: "integer" },
+          quote: { type: "string" },
+          topic: { enum: [...FACT_TOPICS], type: "string" },
+        },
+        required: ["topic", "claim", "quote", "evidence"],
+        type: "object",
+      },
+      type: "array",
+    },
+  },
+  required: ["facts"],
+  type: "object",
+} as const;
 
 const scriptSchema = z.object({
   advertencias: z.array(z.string()).max(8).default([]),
@@ -97,6 +156,32 @@ const scriptSchema = z.object({
   propuestaDeValor: z.string().min(1),
   puntosClave: z.array(z.object({ hechos: z.array(z.string()).default([]), texto: z.string().min(1) })).max(12),
 });
+
+const SCRIPT_JSON_SCHEMA = {
+  properties: {
+    advertencias: { items: { type: "string" }, type: "array" },
+    apertura: { type: "string" },
+    cierre: { type: "string" },
+    preguntasDescubrimiento: { items: { type: "string" }, type: "array" },
+    propuestaDeValor: { type: "string" },
+    puntosClave: {
+      items: {
+        properties: { hechos: { items: { type: "string" }, type: "array" }, texto: { type: "string" } },
+        required: ["texto"],
+        type: "object",
+      },
+      type: "array",
+    },
+  },
+  required: ["apertura", "propuestaDeValor", "puntosClave", "cierre"],
+  type: "object",
+} as const;
+
+const INTENT_JSON_SCHEMA = {
+  properties: { intent: { enum: ["orientacion_venta", "pregunta_producto"], type: "string" } },
+  required: ["intent"],
+  type: "object",
+} as const;
 
 const intentSchema = z.object({ intent: z.enum(["orientacion_venta", "pregunta_producto"]) });
 
@@ -241,6 +326,7 @@ export function createAgentGraph(deps: AgentGraphDependencies) {
 
       const extracted = await deps.llm.generateJson({
         prompt: extractionPrompt(product.name),
+        responseJsonSchema: FACTS_JSON_SCHEMA,
         schema: factsSchema,
         system: extractionSystem(product.name, state.evidence),
       });
@@ -260,6 +346,7 @@ export function createAgentGraph(deps: AgentGraphDependencies) {
 
       const draft = await deps.llm.generateJson({
         prompt: scriptPrompt(selectedProduct.name),
+        responseJsonSchema: SCRIPT_JSON_SCHEMA,
         schema: scriptSchema,
         system: scriptSystem(selectedProduct.name, profile, state.facts),
       });
@@ -283,6 +370,7 @@ export function createAgentGraph(deps: AgentGraphDependencies) {
 
       const { intent } = await deps.llm.generateJson({
         prompt: redactSensitiveText(state.input.text),
+        responseJsonSchema: INTENT_JSON_SCHEMA,
         schema: intentSchema,
         system: CLASSIFY_SYSTEM,
       });
