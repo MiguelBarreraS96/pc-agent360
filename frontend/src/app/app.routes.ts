@@ -5,13 +5,13 @@ import { adminPermissionGuard, authGuard, guestGuard, permissionGuard } from './
 export const routes: Routes = [
   {
     path: 'login',
-    title: 'Acceso | Agente 360',
+    title: 'Acceso | Olivia',
     canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/login.component').then((module) => module.LoginComponent),
   },
   {
     path: 'auth/email-link',
-    title: 'Confirmar acceso | Agente 360',
+    title: 'Confirmar acceso | Olivia',
     loadComponent: () =>
       import('./features/auth/email-link-callback.component').then((module) => module.EmailLinkCallbackComponent),
   },
@@ -28,14 +28,14 @@ export const routes: Routes = [
       },
       {
         path: 'agent',
-        title: 'Agente IA | Agente 360',
-        data: { heading: 'Agente IA', subheading: 'Consulta información de clientes en lenguaje natural' },
+        title: 'Agente Olivia | Olivia',
+        data: { heading: 'Agente Olivia', subheading: 'Consulta información de clientes en lenguaje natural' },
         canActivate: [permissionGuard('agent:read')],
         loadComponent: () => import('./features/agent/agent.component').then((module) => module.AgentComponent),
       },
       {
         path: 'correos-conectados',
-        title: 'Correos conectados | Agente 360',
+        title: 'Correos conectados | Olivia',
         data: { heading: 'Correos conectados', subheading: 'Administra las cuentas con acceso a la plataforma' },
         canActivate: [adminPermissionGuard('users:read')],
         loadComponent: () =>
@@ -43,14 +43,14 @@ export const routes: Routes = [
       },
       {
         path: 'productos',
-        title: 'Productos | Agente 360',
+        title: 'Productos | Olivia',
         data: { heading: 'Productos', subheading: 'Catálogo de productos disponibles' },
         canActivate: [adminPermissionGuard('products:read')],
         loadComponent: () => import('./features/admin/products.component').then((module) => module.ProductsComponent),
       },
       {
         path: 'consultas',
-        title: 'Consultas | Agente 360',
+        title: 'Consultas | Olivia',
         data: { heading: 'Consultas', subheading: 'Consultas de Cliente 360 por rango de fechas' },
         canActivate: [adminPermissionGuard('reports:read')],
         loadComponent: () =>

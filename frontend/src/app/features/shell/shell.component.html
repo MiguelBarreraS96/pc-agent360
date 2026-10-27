@@ -1,5 +1,5 @@
 <ng-template #sidebarBody let-compact="compact">
-  <a class="brand-link flex items-center gap-3 px-2 py-2 mb-3 shrink-0" routerLink="/agent" aria-label="Ir a Agente IA" (click)="closeDrawer()">
+  <a class="brand-link flex items-center gap-3 px-2 py-2 mb-3 shrink-0" routerLink="/agent" aria-label="Ir a Agente Olivia" (click)="closeDrawer()">
     <div
       class="w-10 h-10 rounded-[14px] grid place-items-center shrink-0"
       style="background:linear-gradient(135deg,#00A94F,#00722f); box-shadow:0 10px 22px -10px rgba(0,169,79,.9)"
@@ -8,7 +8,7 @@
     </div>
     <div class="nav-label leading-tight">
       <p class="font-extrabold text-[15px] text-ink">Bolívar</p>
-      <p class="text-[11px] text-ink/40">Agente 360</p>
+      <p class="text-[11px] text-ink/40">Olivia</p>
     </div>
   </a>
 
@@ -62,11 +62,11 @@
           class="nav-item"
           routerLink="/agent"
           routerLinkActive="active"
-          [attr.title]="compact ? 'Agente IA' : null"
+          [attr.title]="compact ? 'Agente Olivia' : null"
           (click)="closeDrawer()"
         >
           <i class="bi bi-stars" aria-hidden="true"></i>
-          <span class="nav-label">Agente IA</span>
+          <span class="nav-label">Agente Olivia</span>
         </a>
       </nav>
     }

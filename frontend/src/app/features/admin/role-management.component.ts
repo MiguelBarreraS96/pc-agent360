@@ -8,7 +8,7 @@ import { CreateRoleRequest, Permission, RoleDto, UpdateRoleRequest } from '../..
 import { nonBlankValidator, normalizeOptionalText, normalizeRoleKey, roleKeyValidator } from '../../core/input-normalization';
 
 const PERMISSION_LABELS: Readonly<Record<Permission, string>> = {
-  'agent:read': 'Agente IA',
+  'agent:read': 'Agente Olivia',
   'emails:manage': 'Gestionar correos',
   'products:read': 'Consultar productos',
   'products:write': 'Gestionar productos',
