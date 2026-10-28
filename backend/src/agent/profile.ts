@@ -196,9 +196,9 @@ export function resolveEligibleProducts(
     const recommended = index === recommendedIndex;
     const aptForCategory = category !== null && profile.aptitudes[category] === true;
     const reason = recommended
-      ? "Es el producto recomendado por Cliente 360 para este cliente."
+      ? "Es el producto recomendado por Olivia para este cliente."
       : aptForCategory
-        ? `Cliente 360 indica que el cliente es apto para ${category}.`
+        ? `Olivia indica que el cliente es apto para ${category}.`
         : "Disponible en el catálogo.";
     const rank = recommended ? 0 : aptForCategory ? 1 : 2;
 
